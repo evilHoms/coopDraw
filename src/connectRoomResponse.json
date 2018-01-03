@@ -1,0 +1,17 @@
+{
+  "host": {
+    "name": "han",
+    "pointer": 545
+  },
+  "guests": [
+    {
+      "name": "guest1",
+      "pointer": 543
+    },
+    {
+      "name": "guest2",
+      "pointer": 542
+    }
+  ],
+  "roomId": 123
+}

@@ -1,16 +1,15 @@
 'use strict';
 
 import './room.scss'
-import { Popup } from '../popup/popup';
 
 export class Room {
-  constructor(hostName, roomId, guestsCount = 0) {
+  constructor(hostName, roomId, guestsCount, eventHandler) {
     this.hostName = hostName;
     this.guestsCount = guestsCount;
     this.roomId = roomId;
     this.room = null;
     this.updateRoom(this.guestsCount);
-    this.room.addEventListener(`click`, this.onConnectClick);
+    this.room.addEventListener(`click`, eventHandler);
   }
 
   updateRoom(guestsCount) {
@@ -39,17 +38,5 @@ export class Room {
 
       return room;
     })();
-  }
-
-  onConnectClick(e) {
-    e.preventDefault();
-    if (!e.target.classList.contains('room__connect--btn'))
-      return;
-
-    //Создаем попап
-    const popup = new Popup('connectRoom');
-    document.querySelector('#root').appendChild(popup.popup);
-
-    console.log(`hello`);
   }
 }

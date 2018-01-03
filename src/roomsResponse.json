@@ -1,17 +1,17 @@
 [
-    {
-      "roomId": 1,
-      "host": "Solo",
-      "guests": 8
-    },
-    {
-      "roomId": 2,
-      "host": "Chuy",
-      "guests": 5
-    },
-    {
-      "roomId": 3,
-      "host": "Emperor",
-      "guests": 0
-    }
+  {
+    "roomId": 1,
+    "host": "Solo",
+    "guests": 8
+  },
+  {
+    "roomId": 2,
+    "host": "Chuy",
+    "guests": 5
+  },
+  {
+    "roomId": 3,
+    "host": "Emperor",
+    "guests": 0
+  }
 ]

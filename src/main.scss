@@ -29,15 +29,14 @@
   border: 1px solid black;
 }
 
-.editor {
-  display: none;
-  border: 1px solid black;
-}
-
 .new-room--btn {
   padding: 2vmin;
 
   border: 1px solid #000;
   color: #000;
   background: #fff;
+}
+
+.hidden {
+  display: none;
 }
