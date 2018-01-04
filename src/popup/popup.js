@@ -27,9 +27,15 @@ export class Popup {
         title.textContent = 'Connecting The Room';
       }
 
+      const nameLabel = document.createElement('label');
+      nameLabel.setAttribute('for', 'nameInput');
+      nameLabel.textContent = 'Name: ';
       const nameInput = document.createElement('input');
       nameInput.id = 'nameInput';
       
+      const passLabel = document.createElement('label');
+      passLabel.setAttribute('for', 'passInput');
+      passLabel.textContent = 'Password: ';
       const passInput = document.createElement('input');
       passInput.id = 'passInput';
 
@@ -38,7 +44,9 @@ export class Popup {
       submitButton.textContent = 'submit';
 
       main.appendChild(title);
+      main.appendChild(nameLabel);
       main.appendChild(nameInput);
+      main.appendChild(passLabel);
       main.appendChild(passInput);
       main.appendChild(submitButton);
       popup.appendChild(main);
@@ -46,4 +54,5 @@ export class Popup {
       return popup;
     })();
   }
+  //Доделать попап, вставить лейблы
 }
