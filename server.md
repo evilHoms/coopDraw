@@ -64,12 +64,12 @@
     {
       roomId1: [
         { 
-          "moveto": [x, y],
-          "pointer": value1 
+          "action": "moveto",
+          "attrs": [x, y]
         },
         { 
-          "lineto": [x, y],
-          "pointer": value2 
+          "action": "lineto",
+          "attrs": [x, y]
         }
       ],
       roomId2: [
