@@ -69,11 +69,13 @@ export class Canvas {
   buildAsideMenu() {
     const aside = this.editor.querySelector('.editor__menu');
     const tools = [
-      'pen',
-      'line',
-      'rectangle',
-      'ellipse',
-      'erase'
+      'pen',        'line',
+      'rectangle',  'ellipse',
+      '',           '',
+      'erase',      '',
+      '',           '',
+      'lineWidth',  '',
+      'fillStyle',  'strokeStyle'
     ];
 
     aside.textContent = '';
@@ -83,12 +85,17 @@ export class Canvas {
 
     function addAsideElement(wrapper, tool, self) {
       const element = document.createElement('div');
-      element.classList.add('tool');
-      element.id = tool;
-      element.textContent = tool;
-      element.addEventListener('click', (e) => {
-        onToolClick(e, self);
-      });
+      if (tool === '') {
+        element.classList.add('hidden-tool');
+      }
+      else {
+        element.classList.add('tool');
+        element.id = tool;
+        element.textContent = tool;
+        element.addEventListener('click', (e) => {
+          onToolClick(e, self);
+        });
+      }
       wrapper.appendChild(element);
     }
 
@@ -96,7 +103,53 @@ export class Canvas {
       self.editor.querySelector('.selected').classList.remove('selected');
       self.tool.current = e.currentTarget.id;
       e.currentTarget.classList.add('selected');
+
+      switch (e.currentTarget.id) {
+        case 'lineWidth':
+        case 'strokeStyle':
+        case 'fillStyle':
+          if (self.editor.querySelector('.option-menu'))
+            aside.removeChild(self.editor.querySelector('.option-menu'));
+          aside.appendChild(self.showOptionMenu(e.currentTarget.id));
+          break;
+        default:
+          if (self.editor.querySelector('.option-menu'))
+            aside.removeChild(self.editor.querySelector('.option-menu'));
+      }
     }
+  }
+
+  showOptionMenu(option) {
+    const currentOptionBtn = document.getElementById(option);
+    const usersMenu = document.querySelector('.users');
+
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('option-menu');
+    wrapper.style.top = currentOptionBtn.getBoundingClientRect().y - parseFloat(getComputedStyle(usersMenu).height) + 'px';
+    const title = document.createElement('h3');
+    const optionInput = document.createElement('input');
+    const apply = document.createElement('button');
+    apply.textContent = 'Confirm';
+    const cansel = document.createElement('button');
+    cansel.textContent = 'Cansel';
+
+    switch (option) {
+      case 'lineWidth':
+        title.textContent = 'Line Width:';
+        break;
+      case 'strokeStyle':
+        title.textContent = 'Stroke Color:';
+        break;
+      case 'fillStyle':
+        title.textContent = 'Fill Color:';
+        break;
+    }
+
+    wrapper.appendChild(title);
+    wrapper.appendChild(optionInput);
+    wrapper.appendChild(apply);
+    wrapper.appendChild(cansel);
+    return wrapper;
   }
 
   initCanvas() {

@@ -12,6 +12,8 @@
 }
 
 .editor__menu {
+  position: relative;
+
   background: #999;
 }
 
@@ -26,4 +28,19 @@
   margin: 2.5%;
   border: 1px solid black;
   cursor: pointer;
+}
+
+.hidden-tool {
+  display: inline-block;
+  width: 45%;
+  padding: 5px;
+  margin: 2.5%;
+}
+
+.option-menu {
+  position: absolute;
+  left: 100%;
+
+  background: #aaa;
+  border: 1px solid black;
 }
