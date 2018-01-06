@@ -25,9 +25,11 @@ export class Canvas {
       yCur: null
     };
     this.options = {
-      strokeWidth: 1,
-      strokeColor: '#000',
-      fillColor: '#fff'
+      lineJoin: 'round',
+      lineCap: 'round',
+      lineWidth: 10,
+      strokeWidth: '#000',
+      fillColor: '#999'
     }
     this.actions = [];
     this.init();
@@ -71,9 +73,7 @@ export class Canvas {
       'line',
       'rectangle',
       'ellipse',
-      'erase',
-      'undo',
-      'redo'
+      'erase'
     ];
 
     aside.textContent = '';
@@ -106,6 +106,7 @@ export class Canvas {
     const drawOpts = this.drawOpts;
     const self = this;
     const draw = this.draw;
+    // Открываем ws соединение
 
     canvas.width = window.innerWidth * 3 / 4;
     canvas.height = window.innerHeight * 3 / 4;
@@ -115,6 +116,7 @@ export class Canvas {
 
     function onMouseDown(e) {
       canvas.addEventListener('mousemove', onMouseMove);
+      // Запоминаем длинну массива с действиями, что бы знать, какие действия отсылать на сервер
 
       drawOpts.isLastPoint = false;
       drawOpts.isFirstPoint = true;
@@ -143,6 +145,7 @@ export class Canvas {
 
       drawOpts.isLastPoint = true;
       draw(tool.current, self);
+      // Через ws отсылаем изменения на сервер
     }
   }
 
@@ -153,6 +156,15 @@ export class Canvas {
         break;
       case 'line':
         self.drawLine();
+        break;
+      case 'rectangle':
+        self.drawRect();
+        break;
+      case 'ellipse':
+        self.drawEllipse();
+        break;
+      case 'erase':
+        self.erase();
         break;
     }
   }
@@ -167,6 +179,10 @@ export class Canvas {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
       ctx.beginPath();
+      ctx.strokeStyle = this.options.strokeStyle;
+      ctx.lineWidth = this.options.lineWidth;
+      ctx.lineCap = this.options.lineCap;
+      ctx.lineJoin = this.options.lineJoin;
       ctx.moveTo(coords.x1, coords.y1);
       actions.push({
         "action": "startpoint",
@@ -190,7 +206,7 @@ export class Canvas {
       ctx.stroke();
       actions.push({
         "action": "lastpoint",
-        "attr": [coords.x2, coords.y2]
+        "attr": [coords.x2, coords.y2, this.options]
       });
 
       coords.x1 = coords.xCur;
@@ -208,6 +224,10 @@ export class Canvas {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
       ctx.beginPath();
+      ctx.strokeStyle = this.options.strokeStyle;
+      ctx.lineWidth = this.options.lineWidth;
+      ctx.lineCap = this.options.lineCap;
+      ctx.lineJoin = this.options.lineJoin;
       actions.push({
         "action": "startpoint",
         "attr": [coords.x1, coords.y1]
@@ -228,8 +248,133 @@ export class Canvas {
       ctx.stroke();
       actions.push({
         "action": "lastpoint",
-        "attr": [coords.x2, coords.y2],
+        "attr": [coords.x2, coords.y2, this.options]
       });
+    }
+  }
+
+  drawRect() {
+    const ctx = this.ctx;
+    const coords = this.coords;
+    const options = this.options;
+    const actions = this.actions;
+
+    if (this.drawOpts.isFirstPoint) {
+      coords.xCur = coords.x1 + options.strokeWidth;
+      coords.yCur = coords.y1 + options.strokeWidth;
+      ctx.beginPath();
+      ctx.fillStyle = this.options.fillColor;
+      ctx.strokeStyle = this.options.strokeStyle;
+      ctx.lineWidth = this.options.lineWidth;
+      actions.push({
+        "action": "startpoint",
+        "attr": [coords.x1, coords.y1]
+      });
+    }
+    else if (!this.drawOpts.isLastPoint) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.drawBuffered(actions);
+      ctx.rect(coords.x1, coords.y1, coords.xCur - coords.x1, coords.yCur - coords.y1);
+      ctx.stroke();
+      ctx.fill();
+    }
+    else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.drawBuffered(actions);
+      ctx.rect(coords.x1, coords.y1, coords.x2 - coords.x1, coords.y2 - coords.y1);
+      ctx.stroke();
+      ctx.fill();
+      actions.push({
+        "action": "lastrectpoint",
+        "attr": [coords.x1, coords.y1, coords.x2, coords.y2, this.options]
+      });
+    }
+  }
+
+  drawEllipse() {
+    const ctx = this.ctx;
+    const coords = this.coords;
+    const options = this.options;
+    const actions = this.actions;
+
+    if (this.drawOpts.isFirstPoint) {
+      coords.xCur = coords.x1 + options.strokeWidth;
+      coords.yCur = coords.y1 + options.strokeWidth;
+      ctx.beginPath();
+      ctx.fillStyle = this.options.fillColor;
+      ctx.strokeStyle = this.options.strokeStyle;
+      ctx.lineWidth = this.options.lineWidth;
+      actions.push({
+        "action": "startellipsepoint",
+        "attr": [coords.x1, coords.y1]
+      });
+    }
+    else if (!this.drawOpts.isLastPoint) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.drawBuffered(actions);
+      ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.xCur - coords.x1), 
+                  Math.abs(coords.yCur - coords.y1), 0, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.fill();
+    }
+    else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.drawBuffered(actions);
+      ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.x2 - coords.x1), 
+                  Math.abs(coords.y2 - coords.y1), 0, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.fill();
+      actions.push({
+        "action": "lastellipsepoint",
+        "attr": [coords.x1, coords.y1, coords.x2, coords.y2, this.options]
+      });
+    }
+  }
+
+  erase() {
+    const ctx = this.ctx;
+    const coords = this.coords;
+    const options = this.options;
+    const actions = this.actions;
+
+    if (this.drawOpts.isFirstPoint) {
+      coords.xCur = coords.x1 + options.strokeWidth;
+      coords.yCur = coords.y1 + options.strokeWidth;
+      ctx.beginPath();
+      ctx.moveTo(coords.x1, coords.y1);
+      actions.push({
+        "action": "startpoint",
+        "attr": [coords.x1, coords.y1]
+      });
+    }
+    else if (!this.drawOpts.isLastPoint) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.drawBuffered(actions);
+      ctx.lineTo(coords.xCur, coords.yCur);
+      ctx.save();
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      ctx.restore();
+      actions.push({
+        "action": "point",
+        "attr": [coords.xCur, coords.yCur]
+      });
+    }
+    else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.drawBuffered(actions);
+      ctx.lineTo(coords.x2, coords.y2);
+      ctx.save();
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      ctx.restore();
+      actions.push({
+        "action": "lasterasepoint",
+        "attr": [coords.x2, coords.y2]
+      });
+
+      coords.x1 = coords.xCur;
+      coords.y1 = coords.yCur;
     }
   }
 
@@ -246,7 +391,44 @@ export class Canvas {
           break;
         case "lastpoint":
           ctx.lineTo(el.attr[0], el.attr[1]);
+          ctx.save();
+          ctx.strokeStyle = el.attr[2].strokeStyle;
+          ctx.lineWidth = el.attr[2].lineWidth;
+          ctx.lineCap = el.attr[2].lineCap;
+          ctx.lineJoin = el.attr[2].lineJoin;
           ctx.stroke();
+          ctx.restore();
+          break;
+        case "lastrectpoint":
+          ctx.rect(el.attr[0], el.attr[1], el.attr[2] - el.attr[0], el.attr[3] - el.attr[1]);
+          ctx.save();
+          ctx.strokeStyle = el.attr[4].strokeStyle;
+          ctx.lineWidth = el.attr[4].lineWidth;
+          ctx.fillStyle = el.attr[4].fillColor;
+          ctx.stroke();
+          ctx.fill();
+          ctx.restore();
+          break;
+        case "startellipsepoint":
+          ctx.beginPath();
+          break;
+        case "lastellipsepoint":
+          ctx.ellipse(el.attr[0], el.attr[1], Math.abs(el.attr[2] - el.attr[0]), 
+                      Math.abs(el.attr[3] - el.attr[1]), 0, 0, 2 * Math.PI);
+          ctx.save();
+          ctx.strokeStyle = el.attr[4].strokeStyle;
+          ctx.lineWidth = el.attr[4].lineWidth;
+          ctx.fillStyle = el.attr[4].fillColor;
+          ctx.stroke();
+          ctx.fill();
+          ctx.restore();
+          break;
+        case "lasterasepoint":
+          ctx.lineTo(el.attr[0], el.attr[1]);
+          ctx.save();
+          ctx.strokeStyle = '#fff';
+          ctx.stroke();
+          ctx.restore();
           break;
       }
     });
