@@ -28,8 +28,8 @@ export class Canvas {
       lineJoin: 'round',
       lineCap: 'round',
       lineWidth: 10,
-      strokeWidth: '#000',
-      fillColor: '#999'
+      strokeStyle: '#000',
+      fillStyle: '#999'
     }
     this.actions = [];
     this.init();
@@ -46,11 +46,48 @@ export class Canvas {
   buildUsersPanel() {
     const panel = this.editor.querySelector('.users');
     panel.textContent = '';
+    const usersWrapper = document.createElement('div');
 
     panel.appendChild(buildUser(this.host.name))
     this.guests.forEach(el => {
-      panel.appendChild(buildUser(el.name));
+      usersWrapper.appendChild(buildUser(el.name));
     });
+
+    const userPanelControlls = document.createElement('div');
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'close';
+    closeBtn.dataset.btn = 'close';
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = 'clear';
+    clearBtn.dataset.btn = 'clear';
+
+    userPanelControlls.appendChild(clearBtn);
+    userPanelControlls.appendChild(closeBtn);
+
+    panel.appendChild(usersWrapper);
+    panel.appendChild(userPanelControlls);
+
+    userPanelControlls.addEventListener('click', (e, self) => onControllBtnClick(e, this));
+
+    function onControllBtnClick(e, self) {
+      switch (e.target.dataset.btn) {
+        case 'close':
+          console.log('close');
+          document.querySelector('.rooms').classList.remove('hidden');
+          document.querySelector('.controlls').classList.remove('hidden');
+          document.querySelector('.editor').classList.add('hidden');
+          self = null;
+          // Если закрыл хост, запрос на сервер с id комнаты, данные о ней удаляются
+          // Реализовать
+          break;
+        case 'clear':
+          // Нажимается только хостом. Очищает canvas
+          // Реализовать
+          self.ctx.clearRect(0, 0, canvas.width, canvas.height);
+          self.actions.splice(0, self.actions.length);
+          break;
+      }
+    }
 
     function buildUser(name) {
       const wrapper = document.createElement('div');
@@ -120,6 +157,7 @@ export class Canvas {
   }
 
   showOptionMenu(option) {
+    const self = this;
     const currentOptionBtn = document.getElementById(option);
     const usersMenu = document.querySelector('.users');
 
@@ -130,26 +168,59 @@ export class Canvas {
     const optionInput = document.createElement('input');
     const apply = document.createElement('button');
     apply.textContent = 'Confirm';
+    apply.dataset.btn = 'apply';
     const cansel = document.createElement('button');
     cansel.textContent = 'Cansel';
+    cansel.dataset.btn = 'cansel';
 
     switch (option) {
       case 'lineWidth':
         title.textContent = 'Line Width:';
+        wrapper.dataset.type = 'lineWidth';
         break;
       case 'strokeStyle':
         title.textContent = 'Stroke Color:';
+        wrapper.dataset.type = 'strokeStyle';
         break;
       case 'fillStyle':
         title.textContent = 'Fill Color:';
+        wrapper.dataset.type = 'fillStyle';
         break;
     }
+
+    wrapper.addEventListener('click', (e) => onBtnClick(e, self));
 
     wrapper.appendChild(title);
     wrapper.appendChild(optionInput);
     wrapper.appendChild(apply);
     wrapper.appendChild(cansel);
     return wrapper;
+
+    function onBtnClick(e, self) {
+      switch (e.target.dataset.btn) {
+        case 'apply':
+          setOption(e.currentTarget.dataset.type, optionInput.value);
+          e.currentTarget.parentElement.removeChild(e.currentTarget);
+          break;
+        case 'cansel':
+          e.currentTarget.parentElement.removeChild(e.currentTarget);
+          break;
+      }
+    }
+
+    function setOption(type, value) {
+      switch (type) {
+        case 'lineWidth':
+          self.options.lineWidth = value;
+          break;
+        case 'strokeStyle':
+          self.options.strokeStyle = value;
+          break;
+        case 'fillStyle':
+          self.options.fillStyle = value;
+          break;
+      }
+    }
   }
 
   initCanvas() {
@@ -259,7 +330,7 @@ export class Canvas {
       ctx.stroke();
       actions.push({
         "action": "lastpoint",
-        "attr": [coords.x2, coords.y2, this.options]
+        "attr": [coords.x2, coords.y2, Object.assign({}, this.options)]
       });
 
       coords.x1 = coords.xCur;
@@ -301,7 +372,7 @@ export class Canvas {
       ctx.stroke();
       actions.push({
         "action": "lastpoint",
-        "attr": [coords.x2, coords.y2, this.options]
+        "attr": [coords.x2, coords.y2, Object.assign({}, this.options)]
       });
     }
   }
@@ -316,7 +387,7 @@ export class Canvas {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
       ctx.beginPath();
-      ctx.fillStyle = this.options.fillColor;
+      ctx.fillStyle = this.options.fillStyle;
       ctx.strokeStyle = this.options.strokeStyle;
       ctx.lineWidth = this.options.lineWidth;
       actions.push({
@@ -339,7 +410,7 @@ export class Canvas {
       ctx.fill();
       actions.push({
         "action": "lastrectpoint",
-        "attr": [coords.x1, coords.y1, coords.x2, coords.y2, this.options]
+        "attr": [coords.x1, coords.y1, coords.x2, coords.y2, Object.assign({}, this.options)]
       });
     }
   }
@@ -354,7 +425,7 @@ export class Canvas {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
       ctx.beginPath();
-      ctx.fillStyle = this.options.fillColor;
+      ctx.fillStyle = this.options.fillStyle;
       ctx.strokeStyle = this.options.strokeStyle;
       ctx.lineWidth = this.options.lineWidth;
       actions.push({
@@ -379,7 +450,7 @@ export class Canvas {
       ctx.fill();
       actions.push({
         "action": "lastellipsepoint",
-        "attr": [coords.x1, coords.y1, coords.x2, coords.y2, this.options]
+        "attr": [coords.x1, coords.y1, coords.x2, coords.y2, Object.assign({}, this.options)]
       });
     }
   }
@@ -406,6 +477,7 @@ export class Canvas {
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.save();
       ctx.strokeStyle = '#fff';
+      ctx.lineWidth = options.lineWidth;
       ctx.stroke();
       ctx.restore();
       actions.push({
@@ -419,11 +491,12 @@ export class Canvas {
       ctx.lineTo(coords.x2, coords.y2);
       ctx.save();
       ctx.strokeStyle = '#fff';
+      ctx.lineWidth = options.lineWidth;
       ctx.stroke();
       ctx.restore();
       actions.push({
         "action": "lasterasepoint",
-        "attr": [coords.x2, coords.y2]
+        "attr": [coords.x2, coords.y2, Object.assign({}, this.options)]
       });
 
       coords.x1 = coords.xCur;
@@ -457,7 +530,7 @@ export class Canvas {
           ctx.save();
           ctx.strokeStyle = el.attr[4].strokeStyle;
           ctx.lineWidth = el.attr[4].lineWidth;
-          ctx.fillStyle = el.attr[4].fillColor;
+          ctx.fillStyle = el.attr[4].fillStyle;
           ctx.stroke();
           ctx.fill();
           ctx.restore();
@@ -471,7 +544,7 @@ export class Canvas {
           ctx.save();
           ctx.strokeStyle = el.attr[4].strokeStyle;
           ctx.lineWidth = el.attr[4].lineWidth;
-          ctx.fillStyle = el.attr[4].fillColor;
+          ctx.fillStyle = el.attr[4].fillStyle;
           ctx.stroke();
           ctx.fill();
           ctx.restore();
@@ -480,6 +553,7 @@ export class Canvas {
           ctx.lineTo(el.attr[0], el.attr[1]);
           ctx.save();
           ctx.strokeStyle = '#fff';
+          ctx.lineWidth = el.attr[2].lineWidth;
           ctx.stroke();
           ctx.restore();
           break;
