@@ -1,6 +1,63 @@
 .room {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 
-  border: 1px solid black;
+  border: 2px solid #444;
+  padding: 2vmin 3vmin;
+
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 3px;
+  box-shadow: 0 0 3px 0 #000;
+}
+
+.room:not(:last-child) {
+  margin-bottom: 3vmin;
+}
+
+.room__host {
+  text-align: left;
+  flex-grow: 1;
+
+  font-family: 'Lato', sans-serif;
+  font-size: 3vmin;
+  font-weight: bold;
+}
+
+.room__guests {
+  padding-right: 5vmin;
+
+  font-family: 'Lato', sans-serif;
+  font-size: 3vmin;
+}
+
+.room__connect--btn {
+  padding: 1vmin 2vmin;
+
+  border-radius: 3px;
+  border: 2px solid #444;
+  color: #000;
+  background: #fff;
+  box-shadow: 2px 2px 2px 0 #000;
+
+  font-family: 'Architects Daughter', cursive;
+  text-transform: uppercase;
+  font-size: 2.5vmin;
+  font-weight: bold;
+
+  cursor: pointer;
+  transition: 0.6s;
+}
+
+.room__connect--btn:hover {
+  box-shadow: 0px 0px 3px 0 #000;
+}
+
+.room__connect--btn:active {
+  transform: translateY(3px);
+}
+
+.room__connect--btn:focus {
+  outline: 1px solid grey;
+  outline-offset: -4px;
 }

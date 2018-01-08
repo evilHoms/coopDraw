@@ -1,10 +1,11 @@
 .editor {
-  border: 1px solid black;
+  
 }
 
 .users {
   display: flex;
   justify-content: space-between;
+  height: 8vh;
 
   background: #ddd;
 }
@@ -22,6 +23,7 @@
 
 .canvas-wrapper {
   display: flex;
+  //height: 92vh;
 }
 
 .tool {

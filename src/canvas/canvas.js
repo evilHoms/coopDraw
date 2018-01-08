@@ -83,7 +83,8 @@ export class Canvas {
         case 'clear':
           // Нажимается только хостом. Очищает canvas
           // Реализовать
-          self.ctx.clearRect(0, 0, canvas.width, canvas.height);
+          self.clearCanvas();
+          //self.ctx.clearRect(0, 0, canvas.width, canvas.height);
           self.actions.splice(0, self.actions.length);
           break;
       }
@@ -232,8 +233,9 @@ export class Canvas {
     const draw = this.draw;
     // Открываем ws соединение
 
-    canvas.width = window.innerWidth * 3 / 4;
-    canvas.height = window.innerHeight * 3 / 4;
+    canvas.width = window.innerWidth * 4 / 5;
+    canvas.height = window.innerHeight * 92 / 100;
+    this.clearCanvas();
 
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mouseup', onMouseUp);
@@ -257,7 +259,6 @@ export class Canvas {
       const canvasBoundingRect = canvas.getBoundingClientRect();
       coords.xCur = Math.round(e.pageX - canvasBoundingRect.x);
       coords.yCur = Math.round(e.pageY - canvasBoundingRect.y);
-
       draw(tool.current, self);
     }
 
@@ -271,6 +272,16 @@ export class Canvas {
       draw(tool.current, self);
       // Через ws отсылаем изменения на сервер
     }
+  }
+
+  clearCanvas() {
+    const ctx = this.ctx;
+    const canvas = this.canvas;
+
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   }
 
   draw(tool, self) {
@@ -314,7 +325,8 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.stroke();
@@ -324,7 +336,8 @@ export class Canvas {
       });
     }
     else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.x2, coords.y2);
       ctx.stroke();
@@ -358,14 +371,16 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.moveTo(coords.x1, coords.y1);
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.stroke();
     }
     else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.moveTo(coords.x1, coords.y1);
       ctx.lineTo(coords.x2, coords.y2);
@@ -396,14 +411,16 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.rect(coords.x1, coords.y1, coords.xCur - coords.x1, coords.yCur - coords.y1);
       ctx.stroke();
       ctx.fill();
     }
     else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.rect(coords.x1, coords.y1, coords.x2 - coords.x1, coords.y2 - coords.y1);
       ctx.stroke();
@@ -434,7 +451,8 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.xCur - coords.x1), 
                   Math.abs(coords.yCur - coords.y1), 0, 0, 2 * Math.PI);
@@ -442,7 +460,8 @@ export class Canvas {
       ctx.fill();
     }
     else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.x2 - coords.x1), 
                   Math.abs(coords.y2 - coords.y1), 0, 0, 2 * Math.PI);
@@ -472,7 +491,8 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.save();
@@ -486,7 +506,8 @@ export class Canvas {
       });
     }
     else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      this.clearCanvas();
+      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.x2, coords.y2);
       ctx.save();
