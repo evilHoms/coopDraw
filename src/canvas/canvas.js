@@ -29,7 +29,8 @@ export class Canvas {
       lineCap: 'round',
       lineWidth: 10,
       strokeStyle: '#000',
-      fillStyle: '#999'
+      fillStyle: '#999',
+      backgroundColor: '#fff'
     }
     this.actions = [];
     this.init();
@@ -111,14 +112,22 @@ export class Canvas {
       'rectangle',  'ellipse',
       '',           '',
       'erase',      '',
-      '',           '',
-      'lineWidth',  '',
-      'fillStyle',  'strokeStyle'
+      '',           ''
+    ];
+
+    const settings = [
+      'lineWidth',
+      'fillStyle',  
+      'strokeStyle',
+      'backgroundColor'
     ];
 
     aside.textContent = '';
     tools.forEach(el => {
       addAsideElement(aside, el, this);
+    });
+    settings.forEach(el => {
+      addSettingElement(aside, el, this);
     });
 
     function addAsideElement(wrapper, tool, self) {
@@ -137,15 +146,62 @@ export class Canvas {
       wrapper.appendChild(element);
     }
 
+    function addSettingElement(wrapper, element, self) {
+      const settingElement = document.createElement('div');
+
+      settingElement.classList.add('setting');
+      settingElement.id = element;
+      settingElement.addEventListener('click', (e) => {
+        onSettingClick(e, self);
+      });
+      const title = document.createElement('div');
+      const name = document.createElement('div');
+      name.classList.add('setting__name')
+      const value = document.createElement('div');
+      value.classList.add('setting__value');
+      name.textContent = element + ': ';
+      switch (element) {
+        case 'lineWidth':
+          const widthInput = document.createElement('input');
+          widthInput.classList.add('setting__input');
+          widthInput.value = self.options.lineWidth;
+          value.appendChild(widthInput);
+          break;
+        case 'strokeStyle':
+          value.textContent = self.options.strokeStyle;
+          break;
+        case 'fillStyle':
+          value.textContent = self.options.fillStyle;
+          break;
+        case 'backgroundColor':
+          value.textContent = self.options.backgroundColor;
+          break;
+        default:
+      }
+      title.appendChild(name);
+      title.appendChild(value);
+      settingElement.appendChild(title);
+      wrapper.appendChild(settingElement);
+    }
+
     function onToolClick(e, self) {
       self.editor.querySelector('.selected').classList.remove('selected');
       self.tool.current = e.currentTarget.id;
       e.currentTarget.classList.add('selected');
+    }
 
+    function onSettingClick(e, self) {
       switch (e.currentTarget.id) {
         case 'lineWidth':
+          const lineWidthInput = aside.querySelector('#lineWidth').querySelector('.setting__input');
+          lineWidthInput.focus();
+          lineWidthInput.addEventListener('input', (e) => {
+            self.options.lineWidth = e.currentTarget.value;
+          });
+          break;
         case 'strokeStyle':
         case 'fillStyle':
+        case 'backgroundColor':
           if (self.editor.querySelector('.option-menu'))
             aside.removeChild(self.editor.querySelector('.option-menu'));
           aside.appendChild(self.showOptionMenu(e.currentTarget.id));
@@ -162,23 +218,26 @@ export class Canvas {
     const currentOptionBtn = document.getElementById(option);
     const usersMenu = document.querySelector('.users');
 
+    const colors = [
+      'white', 'black', 'red', 'orange', 
+      'yellow', 'green', 'blue', 'purple'
+    ]
+
     const wrapper = document.createElement('div');
     wrapper.classList.add('option-menu');
     wrapper.style.top = currentOptionBtn.getBoundingClientRect().y - parseFloat(getComputedStyle(usersMenu).height) + 'px';
     const title = document.createElement('h3');
+    const colorsWrapper = document.createElement('div');
+    colorsWrapper.classList.add('option-menu__colors');
+    setColors(this);
     const optionInput = document.createElement('input');
-    const apply = document.createElement('button');
-    apply.textContent = 'Confirm';
-    apply.dataset.btn = 'apply';
+    optionInput.classList.add('option-menu__input');
+    optionInput.value = this.options[option];
     const cansel = document.createElement('button');
     cansel.textContent = 'Cansel';
     cansel.dataset.btn = 'cansel';
 
     switch (option) {
-      case 'lineWidth':
-        title.textContent = 'Line Width:';
-        wrapper.dataset.type = 'lineWidth';
-        break;
       case 'strokeStyle':
         title.textContent = 'Stroke Color:';
         wrapper.dataset.type = 'strokeStyle';
@@ -187,40 +246,62 @@ export class Canvas {
         title.textContent = 'Fill Color:';
         wrapper.dataset.type = 'fillStyle';
         break;
+      case 'backgroundColor':
+        title.textContent = 'Background Color:';
+        wrapper.dataset.type = 'backgroundColor';
+        break;
     }
 
     wrapper.addEventListener('click', (e) => onBtnClick(e, self));
+    wrapper.addEventListener('input', (e) => onOptionInput(e, self));
 
     wrapper.appendChild(title);
+    wrapper.appendChild(colorsWrapper);
     wrapper.appendChild(optionInput);
-    wrapper.appendChild(apply);
     wrapper.appendChild(cansel);
     return wrapper;
 
     function onBtnClick(e, self) {
       switch (e.target.dataset.btn) {
-        case 'apply':
-          setOption(e.currentTarget.dataset.type, optionInput.value);
-          e.currentTarget.parentElement.removeChild(e.currentTarget);
-          break;
         case 'cansel':
           e.currentTarget.parentElement.removeChild(e.currentTarget);
           break;
       }
     }
 
-    function setOption(type, value) {
+    function onOptionInput(e, self) {
+      setOption(e.currentTarget.dataset.type, optionInput.value, self);
+      currentOptionBtn.querySelector('.setting__value').textContent = optionInput.value;
+    }
+
+    function setOption(type, value, self) {
       switch (type) {
-        case 'lineWidth':
-          self.options.lineWidth = value;
-          break;
         case 'strokeStyle':
           self.options.strokeStyle = value;
           break;
         case 'fillStyle':
           self.options.fillStyle = value;
           break;
+        case 'backgroundColor':
+          self.options.backgroundColor = value;
+          self.drawBuffered(self.actions);
+          break;
       }
+    }
+
+    function setColors(self) {
+      colors.forEach(el => {
+        const color = document.createElement('div');
+        color.classList.add('option-menu__color');
+        color.style.backgroundColor = el;
+        color.dataset.color = el;
+        color.addEventListener('click', (e) => {
+          optionInput.value = e.target.dataset.color;
+          currentOptionBtn.querySelector('.setting__value').textContent = optionInput.value;
+          setOption(option, e.target.dataset.color, self);
+        });
+        colorsWrapper.appendChild(color);
+      });
     }
   }
 
@@ -279,7 +360,7 @@ export class Canvas {
     const canvas = this.canvas;
 
     ctx.save();
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = this.options.backgroundColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
   }
@@ -325,8 +406,6 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.stroke();
@@ -336,8 +415,6 @@ export class Canvas {
       });
     }
     else {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.x2, coords.y2);
       ctx.stroke();
@@ -371,16 +448,12 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.moveTo(coords.x1, coords.y1);
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.stroke();
     }
     else {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.moveTo(coords.x1, coords.y1);
       ctx.lineTo(coords.x2, coords.y2);
@@ -411,16 +484,12 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.rect(coords.x1, coords.y1, coords.xCur - coords.x1, coords.yCur - coords.y1);
       ctx.stroke();
       ctx.fill();
     }
     else {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.rect(coords.x1, coords.y1, coords.x2 - coords.x1, coords.y2 - coords.y1);
       ctx.stroke();
@@ -451,8 +520,6 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.xCur - coords.x1), 
                   Math.abs(coords.yCur - coords.y1), 0, 0, 2 * Math.PI);
@@ -460,8 +527,6 @@ export class Canvas {
       ctx.fill();
     }
     else {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.x2 - coords.x1), 
                   Math.abs(coords.y2 - coords.y1), 0, 0, 2 * Math.PI);
@@ -491,12 +556,10 @@ export class Canvas {
       });
     }
     else if (!this.drawOpts.isLastPoint) {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.xCur, coords.yCur);
       ctx.save();
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = this.options.backgroundColor;
       ctx.lineWidth = options.lineWidth;
       ctx.stroke();
       ctx.restore();
@@ -506,12 +569,10 @@ export class Canvas {
       });
     }
     else {
-      this.clearCanvas();
-      //ctx.clearRect(0, 0, canvas.width, canvas.height);
       this.drawBuffered(actions);
       ctx.lineTo(coords.x2, coords.y2);
       ctx.save();
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = this.options.backgroundColor;
       ctx.lineWidth = options.lineWidth;
       ctx.stroke();
       ctx.restore();
@@ -527,6 +588,7 @@ export class Canvas {
 
   drawBuffered(actions) {
     const ctx = this.ctx;
+    this.clearCanvas();
     actions.forEach(el => {
       switch(el.action) {
         case "startpoint":
@@ -573,7 +635,7 @@ export class Canvas {
         case "lasterasepoint":
           ctx.lineTo(el.attr[0], el.attr[1]);
           ctx.save();
-          ctx.strokeStyle = '#fff';
+          ctx.strokeStyle = this.options.backgroundColor;
           ctx.lineWidth = el.attr[2].lineWidth;
           ctx.stroke();
           ctx.restore();

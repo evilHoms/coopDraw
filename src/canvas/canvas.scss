@@ -46,6 +46,49 @@
   position: absolute;
   left: 100%;
 
+  text-align: center;
+  width: 20vmin;
+
   background: #aaa;
   border: 1px solid black;
+}
+
+.setting {
+  width: 90%;
+  padding: 5px;
+  margin: 2.5%;
+  border: 1px solid black;
+  cursor: pointer;
+}
+
+.setting > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.setting__value {
+  max-width: 20%;
+}
+
+.setting__input {
+  text-align: right;
+  max-width: 100%;
+}
+
+.option-menu__colors {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+
+  width: 80%;
+  margin: 0 auto;
+}
+
+.option-menu__color {
+  width: 3.7vmin;
+  height: 3.7vmin;
+}
+
+.option-menu__input {
+  width: 80%;
 }

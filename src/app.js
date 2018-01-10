@@ -55,6 +55,7 @@ function onPopupSubmitClick(e) {
 
   const name = this.querySelector('#nameInput').value;
   const pass = this.querySelector('#passInput').value;
+  console.log(name, pass);
 
   if (this.dataset.type === 'newRoom') {
     Requests.newRoom('src/newRoomResponse.json', name, pass)
