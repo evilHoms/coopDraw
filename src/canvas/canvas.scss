@@ -1,5 +1,8 @@
 #canvas {
   background: #fff;
+  border: 2px solid #444;
+  border-radius: 3px;
+  width: 85.7vw;
 }
 
 .users {
@@ -23,14 +26,72 @@
   margin: 2px;
   width: 9vw;
   height: 95%;
+  text-align: center;
 
   box-shadow: 0 0 3px 0 #888;
   border-radius: 3px;
   background-color: rgba(255, 255, 255, 0.8);
 }
 
+.user__title {
+  font-family: 'Architects Daughter', cursive;
+  font-size: 2vmin;
+}
+
+.user__name {
+  font-family: 'Lato', sans-serif;
+  font-size: 1.6vmin;
+  font-weight: bold;
+}
+
+.user__controls {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user__btn {
+  margin: 0 3px;
+  padding: 0 0.5vmin;
+
+  border-radius: 3px;
+  border: 2px solid #444;
+  color: #000;
+  background: #fff;
+  box-shadow: 0 0 1px 0 #000;
+
+  font-family: 'Architects Daughter', cursive;
+  font-weight: bold;
+
+  cursor: pointer;
+}
+
+.user__permissions {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 1vmin;
+}
+
+.user__permission-title {
+  font-family: 'Lato', sans-serif;
+  font-size: 1.6vmin;
+}
+
+.user__permission-status {
+  padding: 1vmin;
+  background: red;
+}
+
+.users__settings-wrapper {
+  position: relative;
+}
+
 .editor__menu {
   position: relative;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 14vw;
 
   margin-right: 3px;
   border-top: 2px solid #444;
@@ -44,7 +105,6 @@
 
 .canvas-wrapper {
   display: flex;
-  //height: 92vh;
 }
 
 .tool {
@@ -66,6 +126,7 @@
 .option-menu {
   position: absolute;
   left: 100%;
+  bottom: 0;
 
   text-align: center;
   width: 20vmin;
@@ -112,4 +173,26 @@
 
 .option-menu__input {
   width: 80%;
+}
+
+.users__control-btns--wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.users__control-btn {
+  padding: 1vmin 2vmin;
+  margin: 0 10px;
+
+  border-radius: 3px;
+  border: 2px solid #444;
+  color: #000;
+  background: #fff;
+  box-shadow: 3px 3px 3px 0 #000;
+
+  font-family: 'Architects Daughter', cursive;
+  font-size: 2vmin;
+
+  cursor: pointer;
+  transition: 0.6s;
 }

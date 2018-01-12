@@ -3,7 +3,7 @@
 import './canvas.scss';
 
 export class Canvas {
-  constructor(editorElement, host, users, userName, isHost) {
+  constructor(editorElement, host, users, userName, isHost, background = '#fff') {
     this.editor = editorElement;
     this.host = host;
     this.users = users;
@@ -34,7 +34,7 @@ export class Canvas {
       lineWidth: 10,
       strokeStyle: '#000',
       fillStyle: '#999',
-      backgroundColor: '#fff'
+      backgroundColor: background
     }
 
     this.init();
@@ -58,14 +58,17 @@ export class Canvas {
     const usersWrapper = document.createElement('div');
 
     this.users.forEach(el => {
-      usersWrapper.appendChild(buildUser(el));
+      usersWrapper.appendChild(buildUser(el, this));
     });
 
     const userPanelControlls = document.createElement('div');
+    userPanelControlls.classList.add('users__control-btns--wrapper');
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = 'close';
+    closeBtn.classList.add('users__control-btn');
+    closeBtn.textContent = 'exit';
     closeBtn.dataset.btn = 'close';
     const clearBtn = document.createElement('button');
+    clearBtn.classList.add('users__control-btn');
     clearBtn.textContent = 'clear';
     clearBtn.dataset.btn = 'clear';
 
@@ -97,7 +100,7 @@ export class Canvas {
       }
     }
 
-    function buildUser(user) {
+    function buildUser(user, self) {
       const wrapper = document.createElement('div');
       wrapper.classList.add('user');
 
@@ -106,15 +109,38 @@ export class Canvas {
       title.textContent = user.isHost ? 'Host: ' : 'Guest: '
 
       const userName = document.createElement('div');
-      userName.classList.add('userName');
+      userName.classList.add('user__name');
       userName.textContent = user.name;
 
       const controlls = document.createElement('div');
+      controlls.classList.add('user__controls');
+      const togglePermission = document.createElement('button');
+      togglePermission.classList.add('user__btn');
+      togglePermission.textContent = 'D';
+      const removeGuest = document.createElement('button');
+      removeGuest.classList.add('user__btn');
+      removeGuest.textContent = 'X';
+      controlls.appendChild(togglePermission);
+      controlls.appendChild(removeGuest);
+
       const permissions = document.createElement('div');
+      permissions.classList.add('user__permissions');
+      const permissionTitle = document.createElement('div');
+      permissionTitle.classList.add('user__permission-title');
+      permissionTitle.textContent = 'Drawing';
+      const permissionStatus = document.createElement('div');
+      permissionStatus.classList.add('user__permission-status');
+      permissions.appendChild(permissionTitle);
+      permissions.appendChild(permissionStatus);
       // Заполнить и показывать в зависимости хост или гость
 
       wrapper.appendChild(title);
       wrapper.appendChild(userName);
+      wrapper.appendChild(self.isHost ? controlls : permissions);
+      if (user.isHost) {
+        controlls.style.opacity = 0;
+        permissions.style.opacity = 0;
+      }
 
       return wrapper;
     }
@@ -126,8 +152,7 @@ export class Canvas {
       'pen',        'line',
       'rectangle',  'ellipse',
       '',           '',
-      'erase',      '',
-      '',           ''
+      'erase'
     ];
 
     const settings = [
@@ -137,13 +162,21 @@ export class Canvas {
       'backgroundColor'
     ];
 
+    const toolsWrapper = document.createElement('div');
+    toolsWrapper.classList.add('users__tools-wrapper');
+    const settingsWrapper = document.createElement('div');
+    settingsWrapper.classList.add('users__settings-wrapper');
+
     aside.textContent = '';
     tools.forEach(el => {
-      addAsideElement(aside, el, this);
+      addAsideElement(toolsWrapper, el, this);
     });
     settings.forEach(el => {
-      addSettingElement(aside, el, this);
+      addSettingElement(settingsWrapper, el, this);
     });
+
+    aside.appendChild(toolsWrapper);
+    aside.appendChild(settingsWrapper);
 
     function addAsideElement(wrapper, tool, self) {
       const element = document.createElement('div');
@@ -237,10 +270,8 @@ export class Canvas {
       'white', 'black', 'red', 'orange', 
       'yellow', 'green', 'blue', 'purple'
     ]
-
     const wrapper = document.createElement('div');
     wrapper.classList.add('option-menu');
-    wrapper.style.top = currentOptionBtn.getBoundingClientRect().y - parseFloat(getComputedStyle(usersMenu).height) + 'px';
     const title = document.createElement('h3');
     const colorsWrapper = document.createElement('div');
     colorsWrapper.classList.add('option-menu__colors');
@@ -274,6 +305,9 @@ export class Canvas {
     wrapper.appendChild(colorsWrapper);
     wrapper.appendChild(optionInput);
     wrapper.appendChild(cansel);
+    console.log(currentOptionBtn.getBoundingClientRect().y, parseFloat(getComputedStyle(usersMenu).height), currentOptionBtn.offsetHeight);
+    // wrapper.style.bottom = window.innerHeight - currentOptionBtn.getBoundingClientRect().height - currentOptionBtn.getBoundingClientRect().y + 'px';
+
     return wrapper;
 
     function onBtnClick(e, self) {
@@ -332,10 +366,11 @@ export class Canvas {
     const draw = this.draw;
     // Открываем ws соединение
 
-    canvas.width = window.innerWidth * 4 / 5;
-    canvas.height = window.innerHeight * 92 / 100;
+    canvas.width = window.innerWidth * 4.3 / 5;
+    canvas.height = window.innerHeight * 91.3 / 100;
     this.clearCanvas();
     this.canvasToImage();
+    canvas.style.backgroundColor = this.options.backgroundColor;
     
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mouseup', onMouseUp);

@@ -1,5 +1,6 @@
 {
   "host": "han",
+  "background": "black",
   "users": [
     {
       "name": "han",

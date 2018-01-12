@@ -73,7 +73,7 @@ function onPopupSubmitClick(e) {
       .then(res => {
         document.querySelector('.rooms').classList.add('hidden');
         document.querySelector('.controlls').classList.add('hidden');
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false);
+        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, res.background);
       })
       .catch(er => console.log(er));
   }

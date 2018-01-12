@@ -19,6 +19,7 @@
         "roomId": id1,
         "host": host1,
         "password": 123,
+        "background: #000,
         "users": [
           {
             "name": host1,
@@ -38,6 +39,7 @@
         "roomId": id2,
         "host": host2,
         "password": qwe,
+        "background: #000,
         "users": [
           {
             "name": host2,

@@ -4,7 +4,8 @@
   "users": [
     {
       "name": "han",
-      "ableToDraw": true
+      "ableToDraw": true,
+      "isHost": true
     }
   ],
   "password": "123"
