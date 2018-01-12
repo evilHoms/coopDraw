@@ -1,16 +1,20 @@
 {
-  "host": {
-    "name": "han",
-    "pointer": 545
-  },
-  "guests": [
+  "host": "han",
+  "users": [
+    {
+      "name": "han",
+      "ableToDraw": true,
+      "isHost": true
+    },
     {
       "name": "guest1",
-      "pointer": 543
+      "ableToDraw": false,
+      "isHost": false
     },
     {
       "name": "guest2",
-      "pointer": 542
+      "ableToDraw": false,
+      "isHost": false
     }
   ],
   "roomId": 123

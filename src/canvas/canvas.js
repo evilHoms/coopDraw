@@ -3,10 +3,13 @@
 import './canvas.scss';
 
 export class Canvas {
-  constructor(editorElement, host, guests) {
+  constructor(editorElement, host, users, userName, isHost) {
     this.editor = editorElement;
     this.host = host;
-    this.guests = guests;
+    this.users = users;
+    this.userName = userName;
+    this.isHost = isHost;
+    this.ableToDraw = isHost;
     this.image = this.editor.querySelector('.editor__image');
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
@@ -54,9 +57,8 @@ export class Canvas {
     panel.textContent = '';
     const usersWrapper = document.createElement('div');
 
-    panel.appendChild(buildUser(this.host.name))
-    this.guests.forEach(el => {
-      usersWrapper.appendChild(buildUser(el.name));
+    this.users.forEach(el => {
+      usersWrapper.appendChild(buildUser(el));
     });
 
     const userPanelControlls = document.createElement('div');
@@ -95,14 +97,23 @@ export class Canvas {
       }
     }
 
-    function buildUser(name) {
+    function buildUser(user) {
       const wrapper = document.createElement('div');
       wrapper.classList.add('user');
 
+      const title = document.createElement('h3');
+      title.classList.add('user__title');
+      title.textContent = user.isHost ? 'Host: ' : 'Guest: '
+
       const userName = document.createElement('div');
       userName.classList.add('userName');
-      userName.textContent = name;
+      userName.textContent = user.name;
 
+      const controlls = document.createElement('div');
+      const permissions = document.createElement('div');
+      // Заполнить и показывать в зависимости хост или гость
+
+      wrapper.appendChild(title);
       wrapper.appendChild(userName);
 
       return wrapper;
@@ -374,22 +385,24 @@ export class Canvas {
   }
 
   draw(tool, self) {
-    switch(tool) {
-      case 'pen':
-        self.drawPoint();
-        break;
-      case 'line':
-        self.drawLine();
-        break;
-      case 'rectangle':
-        self.drawRect();
-        break;
-      case 'ellipse':
-        self.drawEllipse();
-        break;
-      case 'erase':
-        self.erase();
-        break;
+    if (self.ableToDraw) {
+      switch(tool) {
+        case 'pen':
+          self.drawPoint();
+          break;
+        case 'line':
+          self.drawLine();
+          break;
+        case 'rectangle':
+          self.drawRect();
+          break;
+        case 'ellipse':
+          self.drawEllipse();
+          break;
+        case 'erase':
+          self.erase();
+          break;
+      }
     }
   }
 

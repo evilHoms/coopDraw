@@ -1,8 +1,11 @@
 {
   "roomId": 123,
-  "host": {
-    "name": "han"
-  },
-  "guests": [],
+  "host": "han",
+  "users": [
+    {
+      "name": "han",
+      "ableToDraw": true
+    }
+  ],
   "password": "123"
 }

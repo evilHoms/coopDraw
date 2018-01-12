@@ -5,20 +5,41 @@
 .users {
   display: flex;
   justify-content: space-between;
-  height: 8vh;
 
-  background: #ddd;
+  height: 8vh;
+  margin-bottom: 3px;
+  border-right: 2px solid #444;
+  border-left: 2px solid #444;
+  border-bottom: 2px solid #444;
+
+  box-shadow: 0 3px 3px 0 #888;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .user {
   display: inline-block;
-  border: 1px solid black;
+  border: 2px solid #444;
+  margin: 2px;
+  width: 9vw;
+  height: 95%;
+
+  box-shadow: 0 0 3px 0 #888;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .editor__menu {
   position: relative;
 
-  background: #999;
+  margin-right: 3px;
+  border-top: 2px solid #444;
+  border-bottom: 2px solid #444;
+  border-right: 2px solid #444;
+
+  box-shadow: 3px 0 3px 0 #666;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .canvas-wrapper {
