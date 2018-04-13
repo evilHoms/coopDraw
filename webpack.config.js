@@ -16,7 +16,9 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js',
+    publicPath: '/'
   },
+  devtool: 'source-map',
   module: {
     rules: [
       {
@@ -25,7 +27,7 @@ module.exports = {
           {
             loader: 'babel-loader',
             options: {
-              presets: ['env', 'react']
+              presets: ['env']
             }
           }
         ],
@@ -55,7 +57,7 @@ module.exports = {
             options: {
               name: '[name].[ext]',
               outputPath: 'img/',
-              publicPath: '/'
+              publicPath: 'img/'
             }
           }
         ]

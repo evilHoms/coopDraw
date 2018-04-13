@@ -6,14 +6,18 @@ import { Requests } from './request/request.js';
 import { Popup } from './popup/popup.js';
 import { Canvas } from './canvas/canvas';
 
+// Адрес один, тк различаются типом запроса GET POST DELETE
+const requestUrl = 'http://localhost:3000/rooms';
+
 const root = document.querySelector('#root');
 const newRoomBtn = document.querySelector(`.new-room--btn`);
 const roomsList = document.querySelector(`.rooms__list`);
 let editor = null;
 
-Requests.getRooms('src/roomsResponse.json')
+Requests.getRooms(requestUrl)
   .then(res => {
     if (res.length) {
+      console.log(res);
       buildRooms(roomsList, res);
     }
     else {
@@ -28,17 +32,18 @@ newRoomBtn.addEventListener(`click`, onNewRoomBtnClick);
 function buildRooms(wrapper, rooms) {
   wrapper.textContent = '';
   rooms.forEach(room => {
-    const roomEl = new Room(room.host, room.roomId, room.guests, onConnectClick);
+    const roomEl = new Room(room.host, room.roomId, room.users.length - 1, onConnectClick);
     wrapper.appendChild(roomEl.room);
   });
 }
 
 function onConnectClick(e) {
   e.preventDefault();
+  const roomId = e.currentTarget.dataset.roomId;
   if (!e.target.classList.contains('room__connect--btn'))
     return;
 
-  const popup = new Popup('connectRoom', onPopupSubmitClick);
+  const popup = new Popup('connectRoom', onPopupSubmitClick, roomId);
   document.querySelector('#root').appendChild(popup.popup);
 }
 
@@ -58,22 +63,24 @@ function onPopupSubmitClick(e) {
   console.log(name, pass);
 
   if (this.dataset.type === 'newRoom') {
-    Requests.newRoom('src/newRoomResponse.json', name, pass)
+    Requests.newRoom(requestUrl, name, pass)
       //Создается объект canvas
       .then(res => {
         document.querySelector('.rooms').classList.add('hidden');
         document.querySelector('.controlls').classList.add('hidden');
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true);
+        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true, res.roomId);
       })
       .catch(er => console.log(er));
   }
   else if (this.dataset.type === 'connectRoom') {
-    Requests.connectRoom('src/connectRoomResponse.json', name, pass)
+    const roomId = e.currentTarget.dataset.roomId;
+    console.log(roomId);
+    Requests.connectRoom(requestUrl, name, roomId, pass)
       //Создается объект canvas
       .then(res => {
         document.querySelector('.rooms').classList.add('hidden');
         document.querySelector('.controlls').classList.add('hidden');
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, res.background);
+        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, roomId, res.imageId, res.background);
       })
       .catch(er => console.log(er));
   }

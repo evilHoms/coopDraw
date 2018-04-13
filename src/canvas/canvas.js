@@ -1,15 +1,22 @@
 'use strict';
 
+import { Requests } from '../request/request.js';
 import './canvas.scss';
 
+const requestUrl = 'http://localhost:3000/rooms';
+const imageUrl = 'https://neto-api.herokuapp.com/pic';
+const wsUrl = 'wss://neto-api.herokuapp.com/pic';
+
 export class Canvas {
-  constructor(editorElement, host, users, userName, isHost, background = '#fff') {
+  constructor(editorElement, host, users, userName, isHost, roomId, imageId = null, background = '#fff') {
     this.editor = editorElement;
     this.host = host;
     this.users = users;
     this.userName = userName;
     this.isHost = isHost;
     this.ableToDraw = isHost;
+    this.roomId = roomId;
+    this.imageId = imageId;
     this.image = this.editor.querySelector('.editor__image');
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
@@ -42,7 +49,13 @@ export class Canvas {
   }
 
   canvasToImage(self = this) {
-    self.image.src = self.canvas.toDataURL('image/png');
+    return new Promise((resolve) => {
+      self.canvas.toBlob((blob) => {
+        self.image.src = URL.createObjectURL(blob);
+        resolve(blob);
+      });
+    });
+    //self.image.src = self.canvas.toDataURL('image/png');
   }
 
   init() {
@@ -87,6 +100,15 @@ export class Canvas {
           document.querySelector('.rooms').classList.remove('hidden');
           document.querySelector('.controlls').classList.remove('hidden');
           document.querySelector('.editor').classList.add('hidden');
+          console.log('roomId: ' + self.roomId);
+          if (!self.isHost) {
+            ws.connection.close();
+            Requests.disconnectRoom(requestUrl, self.userName, self.roomId);
+          }
+          else {
+            ws.connection.close();
+            Requests.deleteRoom(requestUrl, self.roomId);
+          }
           self = null;
           // Если закрыл хост, запрос на сервер с id комнаты, данные о ней удаляются
           // Реализовать
@@ -94,8 +116,10 @@ export class Canvas {
         case 'clear':
           // Нажимается только хостом. Очищает canvas
           // Реализовать
-          self.clearCanvas();
-          self.canvasToImage();
+          if (this.isHost) {
+            self.clearCanvas();
+            self.canvasToImage();
+          }
           break;
       }
     }
@@ -364,8 +388,34 @@ export class Canvas {
     const drawOpts = this.drawOpts;
     const self = this;
     const draw = this.draw;
-    // Открываем ws соединение
-
+    const ws = {
+      url: null,//`wss://neto-api.herokuapp.com/pic/${this.roomId}`,
+      connection: null
+    };
+    const setWsListeners = () => {
+      ws.connection.addEventListener('open', e => console.log('connection opened'));
+      ws.connection.addEventListener('message', e => console.log(`new ws message: ${e.data}`));
+      ws.connection.addEventListener('close', e => console.log('connection closed'));
+      ws.connection.addEventListener('error', e => console.log(`some ws error: ${e.data}`));
+      window.addEventListener('beforeunload', e => ws.connection.close());
+    }
+    // Посылаем POST запрос на сервер http://neto-api.herokuapp.com/pic
+    // Content-Type: multipart/form-data
+    // Тело запроса - формдата, с полями title, image(название, изображение)
+    // В ответе приходит id изображения, записать в imageId конкретной комнаты
+    this.canvasToImage()
+      .then(res => Requests.newImage(imageUrl, res, this.host)
+      .then(res => {
+        this.imageId = res.id;
+        Requests.setImageId(requestUrl, this.roomId, this.imageId)
+          .then(console.log)
+          .catch(console.log);
+        ws.url = `wss://neto-api.herokuapp.com/pic/${this.imageId}`;
+        ws.connection = new WebSocket(ws.url);
+        setWsListeners();
+      }))
+      .catch(console.log);
+    // Размеры  канвы, за вычетом верхней и боковой панелей
     canvas.width = window.innerWidth * 4.3 / 5;
     canvas.height = window.innerHeight * 91.3 / 100;
     this.clearCanvas();

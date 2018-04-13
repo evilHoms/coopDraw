@@ -3,9 +3,10 @@
 import './popup.scss';
 
 export class Popup {
-  constructor(type, eventHendler) {
+  constructor(type, eventHendler, roomId) {
     this.type = type;
     this.popup = null;
+    this.roomId = roomId;
     this.createPopup();
     this.popup.addEventListener('click', eventHendler);
   }
@@ -15,6 +16,7 @@ export class Popup {
       const popup = document.createElement('div');
       popup.classList.add('popup');
       popup.dataset.type = this.type;
+      popup.dataset.roomId = this.roomId;
 
       const main = document.createElement('div');
       main.classList.add('popup__main');
@@ -65,5 +67,4 @@ export class Popup {
       return popup;
     })();
   }
-  //Доделать попап, вставить лейблы
 }
