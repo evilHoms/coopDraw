@@ -14,10 +14,40 @@ export class Canvas {
     this.users = users;
     this.userName = userName;
     this.isHost = isHost;
-    this.ableToDraw = isHost;
+    this.ableToDraw = true;
     this.roomId = roomId;
     this.imageId = imageId;
+    this.loader = document.querySelector('.canvas-loader');
+    // В буфере храним действия над канвасом, до их отправления на сервер
+    // Каждый элемент - объект с полями x, y
+    this.buffer = [];
+    this.lastBufferItem = null;
+    // В данном буфере хранятся координаты фигур(кроме точек), для отображения
+    // траектории их рисования(не отправляется на сервер) 
+    this.pathBuffer = [];
+    // Есть ли данные в буфере на момент получения сообщения по ws
+    this.isQueue = false;
+    console.log(this.wsTimestamp);
+    // В this.image помещается изображение полученное с сервера
+    // Отображается на канвасе, только после полной загрузки изображения
+    // При начале загрузки нового изображения, канвас берет картинку из
+    // this.canvasBuffer, в котором сохраняется изображение на момент отправки запроса на сервер.
     this.image = this.editor.querySelector('.editor__image');
+    this.image.addEventListener('load', (e) => {
+      this.clearCanvas();
+      console.log('loaded new image');
+      this.ctx.drawImage(this.image, 0, 0);
+      this.drawBuffered();
+      if (this.buffer.length > 1)
+        this.ws.send();
+      else {
+        this.isQueue = false;
+      }
+    });
+    // this.image.addEventListener('loadstart', (e) => {
+    //   console.log('new image loading started');
+    // })
+    this.canvasBuffer = new Image();
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
     this.drawOpts = {
@@ -43,15 +73,62 @@ export class Canvas {
       fillStyle: '#999',
       backgroundColor: background
     }
+    this.ws = {
+      url: null,
+      connection: null,
+      setListeners: () => {
+        this.ws.connection.addEventListener('open', e => console.log('connection opened'));
+        this.ws.connection.addEventListener('message', e => {
+          console.log(`new ws message: ${e.data}`);
+          const data = JSON.parse(e.data);
+          switch (data.event) {
+            case 'pic':
+              this.image.src = data.pic.mask ? data.pic.mask : data.pic.url;
+              this.editor.classList.remove('hidden');
+              this.loader.classList.add('hidden');
+              break;
+            case 'mask':
+              this.image.src = data.url;
+              break;
+          }
+        });
+        this.ws.connection.addEventListener('close', e => console.log('connection closed'));
+        this.ws.connection.addEventListener('error', e => console.log(`some ws error: ${e.data}`));
+        window.addEventListener('beforeunload', e => {
+          this.ws.connection.close();
+          if (this.isHost) {
+            console.log(this);
+            Requests.deleteRoom(requestUrl, this.roomId);
+          }
+        });
+      },
+      send: () => {
+        this.canvasToImage()
+          .then(res => {
+            // this.canvasToImage()
+            //   .then(this.ctx.drawImage(this.canvasBuffer, 0, 0))
+            //   .catch(console.log());
+            this.ws.connection.send(res);
+          })
+          .catch(console.log);
+      }
+    };
 
     this.init();
     this.editor.querySelector('#pen').classList.add('selected');
   }
 
-  canvasToImage(self = this) {
+  canvasToImage(self = this, cleared = false) {
     return new Promise((resolve) => {
+      this.clearCanvas();
+      if (!cleared) {
+        this.ctx.drawImage(this.canvasBuffer, 0, 0);
+        this.drawBuffered();
+      }
+      this.buffer.splice(0, this.buffer.length - 1);
       self.canvas.toBlob((blob) => {
-        self.image.src = URL.createObjectURL(blob);
+        //console.log(URL.createObjectURL(blob));
+        self.canvasBuffer.src = URL.createObjectURL(blob);
         resolve(blob);
       });
     });
@@ -59,10 +136,10 @@ export class Canvas {
   }
 
   init() {
+    this.loader.classList.remove('hidden');
     this.buildUsersPanel();
     this.buildAsideMenu();
     this.initCanvas();
-    this.editor.classList.remove('hidden');
   }
 
   buildUsersPanel() {
@@ -85,7 +162,7 @@ export class Canvas {
     clearBtn.textContent = 'clear';
     clearBtn.dataset.btn = 'clear';
 
-    userPanelControlls.appendChild(clearBtn);
+    this.isHost && userPanelControlls.appendChild(clearBtn);
     userPanelControlls.appendChild(closeBtn);
 
     panel.appendChild(usersWrapper);
@@ -102,11 +179,11 @@ export class Canvas {
           document.querySelector('.editor').classList.add('hidden');
           console.log('roomId: ' + self.roomId);
           if (!self.isHost) {
-            ws.connection.close();
+            this.ws.connection.close();
             Requests.disconnectRoom(requestUrl, self.userName, self.roomId);
           }
           else {
-            ws.connection.close();
+            this.ws.connection.close();
             Requests.deleteRoom(requestUrl, self.roomId);
           }
           self = null;
@@ -116,9 +193,11 @@ export class Canvas {
         case 'clear':
           // Нажимается только хостом. Очищает canvas
           // Реализовать
-          if (this.isHost) {
-            self.clearCanvas();
-            self.canvasToImage();
+          if (self.isHost) {
+            console.log('clear');
+            self.canvasToImage(self, true)
+              .then(res => self.ws.connection.send(res))
+              .catch(console.log);
           }
           break;
       }
@@ -360,7 +439,7 @@ export class Canvas {
           self.canvas.style.backgroundColor = value;
           self.clearCanvas();
           console.log(self.options.backgroundColor);
-          self.ctx.drawImage(self.image, 0, 0);
+          //self.ctx.drawImage(self.image, 0, 0);
           break;
       }
     }
@@ -388,39 +467,39 @@ export class Canvas {
     const drawOpts = this.drawOpts;
     const self = this;
     const draw = this.draw;
-    const ws = {
-      url: null,//`wss://neto-api.herokuapp.com/pic/${this.roomId}`,
-      connection: null
-    };
-    const setWsListeners = () => {
-      ws.connection.addEventListener('open', e => console.log('connection opened'));
-      ws.connection.addEventListener('message', e => console.log(`new ws message: ${e.data}`));
-      ws.connection.addEventListener('close', e => console.log('connection closed'));
-      ws.connection.addEventListener('error', e => console.log(`some ws error: ${e.data}`));
-      window.addEventListener('beforeunload', e => ws.connection.close());
-    }
+    const ws = this.ws;
+
+    // Размеры  канвы, за вычетом верхней и боковой панелей
+    canvas.width = window.innerWidth * 4.2 / 5;
+    canvas.height = window.innerHeight * 91 / 100;
+    this.clearCanvas();
+    //this.canvasToImage();
+    canvas.style.backgroundColor = this.options.backgroundColor;
+    this.image.style.left = this.canvas.getBoundingClientRect().left + 'px';
+    console.log(this.canvas.getBoundingClientRect().left);
+
     // Посылаем POST запрос на сервер http://neto-api.herokuapp.com/pic
-    // Content-Type: multipart/form-data
     // Тело запроса - формдата, с полями title, image(название, изображение)
     // В ответе приходит id изображения, записать в imageId конкретной комнаты
-    this.canvasToImage()
-      .then(res => Requests.newImage(imageUrl, res, this.host)
-      .then(res => {
-        this.imageId = res.id;
-        Requests.setImageId(requestUrl, this.roomId, this.imageId)
-          .then(console.log)
-          .catch(console.log);
-        ws.url = `wss://neto-api.herokuapp.com/pic/${this.imageId}`;
-        ws.connection = new WebSocket(ws.url);
-        setWsListeners();
-      }))
-      .catch(console.log);
-    // Размеры  канвы, за вычетом верхней и боковой панелей
-    canvas.width = window.innerWidth * 4.3 / 5;
-    canvas.height = window.innerHeight * 91.3 / 100;
-    this.clearCanvas();
-    this.canvasToImage();
-    canvas.style.backgroundColor = this.options.backgroundColor;
+    if (this.isHost) {
+      this.canvasToImage()
+        .then(res => Requests.newImage(imageUrl, res, this.host)
+        .then(res => {
+          this.imageId = res.id;
+          Requests.setImageId(requestUrl, this.roomId, this.imageId)
+            .then(console.log)
+            .catch(console.log);
+          ws.url = `wss://neto-api.herokuapp.com/pic/${this.imageId}`;
+          ws.connection = new WebSocket(ws.url);
+          ws.setListeners();
+        }))
+        .catch(console.log);
+    }
+    else {
+      ws.url = `wss://neto-api.herokuapp.com/pic/${this.imageId}`;
+      ws.connection = new WebSocket(ws.url);
+      ws.setListeners();
+    }
     
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mouseup', onMouseUp);
@@ -491,6 +570,58 @@ export class Canvas {
     }
   }
 
+  drawBuffered(buffer = this.buffer) {
+    const ctx = this.ctx;
+    if (buffer.length > 0) {
+      for (let i = 0; i < buffer.length; i++) {
+        switch (buffer[i].type) {
+          case 'point':
+            console.log(this.isQueue, this.lastBufferItem);
+            if (buffer[i].pos === 'first' || i === 0 && (buffer[i].pos === 'last' || buffer[i].pos === 'reg')) {
+              ctx.moveTo(buffer[i].x, buffer[i].y);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+            }
+            else {
+              ctx.lineTo(buffer[i].x, buffer[i].y);
+              ctx.stroke();
+            } 
+            this.lastBufferItem = 'point';
+            break;
+          case 'line':
+            console.log('draw line');
+            if (i !== 0 || buffer[i].isPath || buffer[i].pos === 'first') {
+              if (!buffer[i - 1] || buffer[i - 1].type !== 'line') {
+                ctx.beginPath();
+                ctx.moveTo(buffer[i].x, buffer[i].y);
+              }
+              else {
+                ctx.lineTo(buffer[i].x, buffer[i].y);
+                ctx.stroke();
+              }
+              this.lastBufferItem = 'line';
+              break;
+            }
+          case 'rect':
+            if (buffer[i].isPath || i !== 0) {
+              ctx.beginPath();
+              ctx.rect(buffer[i].x1, buffer[i].y1, buffer[i].x2, buffer[i].y2);
+              ctx.stroke();
+              ctx.fill();
+              ctx.closePath();
+            }
+            break;
+          case 'ellipse':
+            if (buffer[i].isPath || i !== 0) {
+              ctx.beginPath();
+              ctx.ellipse(buffer[i].x, buffer[i].y, buffer[i].dx, buffer[i].dy, 0, 0, 2 * Math.PI);
+              ctx.stroke();
+              ctx.fill();
+              ctx.closePath();
+            }
+        }
+      }
+    }
+  }
+
   drawPoint() {
     const ctx = this.ctx;
     const coords = this.coords;
@@ -504,19 +635,51 @@ export class Canvas {
       ctx.lineWidth = this.options.lineWidth;
       ctx.lineCap = this.options.lineCap;
       ctx.lineJoin = this.options.lineJoin;
-      ctx.moveTo(coords.x1, coords.y1);
+      //ctx.moveTo(coords.x1, coords.y1);
       this.clearCanvas();
-      this.ctx.drawImage(this.image, 0, 0);
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      console.log(this.buffer);
+      this.buffer.push({x: coords.x1, y: coords.y1, type: 'point', pos: 'first'});
+      this.drawBuffered();
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.lineTo(coords.xCur, coords.yCur);
-      ctx.stroke();
+      this.clearCanvas()
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({x: coords.xCur, y: coords.yCur, type: 'point', pos: 'reg'});
+      this.drawBuffered();
+      if (!this.isQueue && this.buffer.length > 20) {
+        this.isQueue = true;
+        this.ws.send();
+      }
+      //ctx.lineTo(coords.xCur, coords.yCur);
+      //ctx.stroke();
+      //this.ws.send();
+      // В момент, когда получено новое изображение по ws, канвас ничего не отображает,
+      // Пока изображение не подгрузится. В этот момент нужно использовать другое
+      // Изображение, в котором будет храниться канвас с буфером(или отдельно),
+      // Пока новое изображение не прогрузится.
+      // Отправлять новое сообщения в событии onload, изображения
+      // Рисуем на канвасе, изображение состоит из картинки из первого img и буфера
+      // В момент отправки, все стирается, на канвасе изображение и буфер объединяются
+      // Сохраняются в 1й img, отправляются по ws и буфер обнуляется
+      // Теперь рисуем на склеином изображении и с новым буфером.
+      // При получении изображения, пока оно не прогрузилось(onload),
+      // Рисуем на старом, после прогрузки, чистим канвас, отображаем новое
+      // Изображение, буфер, сохраняем в первом img, отправляем на сервер и чистим буфер,
+      // И так, пока в буфере есть данные, либо приходят сообщения с сервера.
     }
     else {
-      ctx.lineTo(coords.x2, coords.y2);
-      ctx.stroke();
-
-      this.canvasToImage();
+      this.clearCanvas()
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({x: coords.x2, y: coords.y2, type: 'point', pos: 'last'});
+      // ctx.lineTo(coords.x2, coords.y2);
+      // ctx.stroke();
+      this.drawBuffered();
+      // При отпускании кнопки отсылаем через ws изображение
+      if (!this.isQueue) {
+        this.isQueue = true;
+        this.ws.send();
+      }
 
       coords.x1 = coords.xCur;
       coords.y1 = coords.yCur;
@@ -535,22 +698,49 @@ export class Canvas {
       ctx.lineWidth = this.options.lineWidth;
       ctx.lineCap = this.options.lineCap;
       ctx.lineJoin = this.options.lineJoin;
-      this.clearCanvas();
-      this.ctx.drawImage(this.image, 0, 0);
+      // this.clearCanvas();
+      // this.ctx.drawImage(this.image, 0, 0);
+
+      // Пока я рисую, на канвасе отображается только изображение этого рисунка, 
+      // Остальное, что уже нарисовано, либо приходит через ws,
+      // Берется из изображения img, когда дорисовал текущую фигуру,
+      // Холст очищается, на него помещается изображение из img,
+      // И все вместе отправляется через ws. Для рисования Point'ов
+      // Все происходит при каждом соединении линией поинтов.
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
-      this.ctx.drawImage(this.image, 0, 0);
-      ctx.beginPath();
-      ctx.moveTo(coords.x1, coords.y1);
-      ctx.lineTo(coords.xCur, coords.yCur);
-      ctx.stroke();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      //ctx.beginPath();
+      // ctx.moveTo(coords.x1, coords.y1);
+      // ctx.lineTo(coords.xCur, coords.yCur);
+      if (this.pathBuffer.length) {
+        this.pathBuffer.splice(0, this.pathBuffer.length);
+      }
+      this.pathBuffer.push({x: coords.x1, y: coords.y1, type: 'line', isPath: 'true'});
+      this.pathBuffer.push({x: coords.xCur, y: coords.yCur, type: 'line', isPath: 'true'});
+      // if (this.buffer[this.buffer.length - 2] && this.buffer[this.buffer.length - 2].type === 'line') {
+      //   this.buffer.pop();
+      //   this.buffer.pop();
+      // }
+      // this.buffer.push({x: coords.x1, y: coords.y1, type: 'line'});
+      // this.buffer.push({x: coords.xCur, y: coords.yCur, type: 'line'});
+      this.drawBuffered(this.pathBuffer);
+      //ctx.stroke();
     }
     else {
-      ctx.moveTo(coords.x1, coords.y1);
-      ctx.lineTo(coords.x2, coords.y2);
-      ctx.stroke();
-      this.canvasToImage();
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      // ctx.moveTo(coords.x1, coords.y1);
+      // ctx.lineTo(coords.x2, coords.y2);
+      // ctx.stroke();
+      //this.buffer.pop();
+      this.buffer.push({x: coords.x1, y: coords.y1, type: 'line', pos: 'first'});
+      this.buffer.push({x: coords.x2, y: coords.y2, type: 'line', pos: 'last'});
+      this.drawBuffered();
+      //this.canvasToImage();
+
+      this.ws.send();
     }
   }
 
@@ -566,22 +756,33 @@ export class Canvas {
       ctx.fillStyle = this.options.fillStyle;
       ctx.strokeStyle = this.options.strokeStyle;
       ctx.lineWidth = this.options.lineWidth;
-      this.clearCanvas();
-      ctx.drawImage(this.image, 0, 0);
+      // this.clearCanvas();
+      // ctx.drawImage(this.image, 0, 0);
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
       ctx.drawImage(this.image, 0, 0);
-      ctx.beginPath();
-      ctx.rect(coords.x1, coords.y1, coords.xCur - coords.x1, coords.yCur - coords.y1);
-      ctx.stroke();
-      ctx.fill();
+      if (this.pathBuffer.length) {
+        this.pathBuffer.splice(0, this.pathBuffer.length);
+      }
+      this.pathBuffer.push({x1: coords.x1, y1: coords.y1, x2: coords.xCur - coords.x1, y2: coords.yCur - coords.y1, type: 'rect', isPath: true});
+      this.drawBuffered(this.pathBuffer);
+      // ctx.beginPath();
+      // ctx.rect(coords.x1, coords.y1, coords.xCur - coords.x1, coords.yCur - coords.y1);
+      // ctx.stroke();
+      // ctx.fill();
     }
     else {
-      ctx.rect(coords.x1, coords.y1, coords.x2 - coords.x1, coords.y2 - coords.y1);
-      ctx.stroke();
-      ctx.fill();
-      this.canvasToImage();
+      // ctx.rect(coords.x1, coords.y1, coords.x2 - coords.x1, coords.y2 - coords.y1);
+      // ctx.stroke();
+      // ctx.fill();
+      // this.canvasToImage();
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({type: 'rect', pos: 'first'});
+      this.buffer.push({x1: coords.x1, y1: coords.y1, x2: coords.xCur - coords.x1, y2: coords.yCur - coords.y1, type: 'rect'});
+      this.drawBuffered();
+      this.ws.send();
     }
   }
 
@@ -597,24 +798,37 @@ export class Canvas {
       ctx.fillStyle = this.options.fillStyle;
       ctx.strokeStyle = this.options.strokeStyle;
       ctx.lineWidth = this.options.lineWidth;
-      this.clearCanvas();
-      ctx.drawImage(this.image, 0, 0);
+      // this.clearCanvas();
+      // ctx.drawImage(this.image, 0, 0);
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
       ctx.drawImage(this.image, 0, 0);
-      ctx.beginPath();
-      ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.xCur - coords.x1), 
-                  Math.abs(coords.yCur - coords.y1), 0, 0, 2 * Math.PI);
-      ctx.stroke();
-      ctx.fill();
+      if (this.pathBuffer.length) {
+        this.pathBuffer.splice(0, this.pathBuffer.length);
+      }
+      this.pathBuffer.push({x: coords.x1, y: coords.y1, dx: Math.abs(coords.xCur - coords.x1), 
+                            dy: Math.abs(coords.yCur - coords.y1), type: 'ellipse', isPath: true});
+      this.drawBuffered(this.pathBuffer);
+      // ctx.beginPath();
+      // ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.xCur - coords.x1), 
+      //             Math.abs(coords.yCur - coords.y1), 0, 0, 2 * Math.PI);
+      // ctx.stroke();
+      // ctx.fill();
     }
     else {
-      ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.x2 - coords.x1), 
-                  Math.abs(coords.y2 - coords.y1), 0, 0, 2 * Math.PI);
-      ctx.stroke();
-      ctx.fill();
-      this.canvasToImage();
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({type: 'ellipse', pos: 'first'});
+      this.buffer.push({x: coords.x1, y: coords.y1, dx: Math.abs(coords.xCur - coords.x1), 
+                        dy: Math.abs(coords.yCur - coords.y1), type: 'ellipse'});
+      this.drawBuffered();
+      // ctx.ellipse(coords.x1, coords.y1, Math.abs(coords.x2 - coords.x1), 
+      //             Math.abs(coords.y2 - coords.y1), 0, 0, 2 * Math.PI);
+      // ctx.stroke();
+      // ctx.fill();
+      // this.canvasToImage();
+      this.ws.send();
     }
   }
 
@@ -648,7 +862,8 @@ export class Canvas {
       ctx.stroke();
       ctx.restore();
 
-      this.canvasToImage();
+      // this.canvasToImage();
+      this.ws.send();
 
       coords.x1 = coords.xCur;
       coords.y1 = coords.yCur;

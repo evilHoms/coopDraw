@@ -44,17 +44,19 @@ function onConnectClick(e) {
     return;
 
   const popup = new Popup('connectRoom', onPopupSubmitClick, roomId);
-  document.querySelector('#root').appendChild(popup.popup);
+  root.appendChild(popup.popup);
+  document.querySelector('.popup').querySelector('input').focus();
 }
 
 function onNewRoomBtnClick(e) {
   e.preventDefault();
   const newRoomPopup = new Popup('newRoom', onPopupSubmitClick);
   root.appendChild(newRoomPopup.popup);
+  document.querySelector('.popup').querySelector('input').focus();
 }
 
 function onPopupSubmitClick(e) {
-  e.preventDefault();
+  e && e.preventDefault();
   if (!e.target.classList.contains('popup__submit--btn'))
     return;
 
