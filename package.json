@@ -8,7 +8,7 @@
     "serve": "webpack-dev-server",
     "build": "webpack",
     "prod": "webpack -p",
-    "start-dev": "PORT=3000 node server.js",
+    "start-dev": "node server.js",
     "start-prod": "PORT=3000 PRODUCTION=true node server.js"
   },
   "author": "",
