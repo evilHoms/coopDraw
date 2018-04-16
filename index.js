@@ -11,7 +11,7 @@ const mode = process.env.PRODUCTION ? 'production' : 'development';
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); 
 app.use(upload.array()); 
-app.use(express.static('public'));
+app.use('/public', express.static('dist'));
 routes(app);
 
 const onServerStart = () => {
