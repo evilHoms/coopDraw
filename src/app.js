@@ -5,9 +5,11 @@ import { Room } from './room/room.js';
 import { Requests } from './request/request.js';
 import { Popup } from './popup/popup.js';
 import { Canvas } from './canvas/canvas';
+import config from '../config.json';
 
 // Адрес один, тк различаются типом запроса GET POST DELETE
-const requestUrl = 'http://localhost:3000/rooms';
+const { hostname } = config;
+const requestUrl = hostname + '/rooms';
 
 const root = document.querySelector('#root');
 const newRoomBtn = document.querySelector(`.new-room--btn`);

@@ -2,8 +2,10 @@
 
 import { Requests } from '../request/request.js';
 import './canvas.scss';
+import config from '../../config.json';
 
-const requestUrl = 'http://localhost:3000/rooms';
+const { hostname } = config;
+const requestUrl = hostname + '/rooms';
 const imageUrl = 'https://neto-api.herokuapp.com/pic';
 const wsUrl = 'wss://neto-api.herokuapp.com/pic';
 
