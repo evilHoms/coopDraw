@@ -167,8 +167,7 @@ const setImageId = (req, res) => {
 }
 
 const routes = (app) => {
-  process.env.PRODUCTION && 
-    app.get('/', rootHandler);
+  app.get('/', rootHandler);
   app.get('/rooms', getRooms);
   app.post('/rooms', addRoom);
   app.delete('/rooms', removeRoom);
