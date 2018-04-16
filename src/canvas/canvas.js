@@ -162,7 +162,7 @@ export class Canvas {
           document.querySelector('.controlls').classList.remove('hidden');
           document.querySelector('.editor').classList.add('hidden');
           console.log('roomId: ' + self.roomId);
-          this.ws.connection.close();
+          self.ws.connection.close();
           if (!self.isHost) {
             Requests.disconnectRoom(requestUrl, self.userName, self.roomId);
           }
