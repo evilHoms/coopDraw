@@ -72,7 +72,8 @@ function onPopupSubmitClick(e) {
       .then(res => {
         document.querySelector('.rooms').classList.add('hidden');
         document.querySelector('.controlls').classList.add('hidden');
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true, res.roomId);
+        console.log(res.userId);
+        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true, res.roomId, res.userId);
       })
       .catch(er => console.log(er));
   }
@@ -82,9 +83,10 @@ function onPopupSubmitClick(e) {
     Requests.connectRoom(requestUrl, name, roomId, pass)
       //Создается объект canvas
       .then(res => {
+        console.log(res);
         document.querySelector('.rooms').classList.add('hidden');
         document.querySelector('.controlls').classList.add('hidden');
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, roomId, res.imageId, res.background);
+        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, roomId, res.userId, res.imageId, res.background);
       })
       .catch(er => console.log(er));
   }

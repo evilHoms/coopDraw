@@ -74,11 +74,11 @@ export class Requests {
     });
   }
 
-  static disconnectRoom(url, guest, roomId) {
+  static disconnectRoom(url, roomId, userId) {
     //Request to disconnect the room
     return new Promise((resolve, reject) => {
       const form = new FormData();
-      form.append('name', guest);
+      form.append('userId', userId);
       form.append('action', 'disconnect');
       form.append('roomId', roomId);
       console.log(url);
@@ -161,5 +161,22 @@ export class Requests {
         .then(resolve)
         .catch(reject);
     });
+  }
+
+  static keepConnection(props, callback) {
+    const { url, roomId, userId } = props;
+    if (props.keepConnection) {
+      return new Promise((resolve, reject) => {
+        console.log('connection request was sent');
+        fetch(`${url}?roomId=${roomId}&userId=${userId}`)
+          .then(res => res.json())
+          .then(res => {
+            this.keepConnection(props, callback);
+            return res;
+          })
+          .then(callback)
+          .catch(reject);
+      });
+    }
   }
 }

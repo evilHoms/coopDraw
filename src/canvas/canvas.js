@@ -6,11 +6,12 @@ import config from '../../config.json';
 
 const { hostname } = config;
 const requestUrl = hostname + '/rooms';
+const connectionUrl = hostname + '/connection';
 const imageUrl = 'https://neto-api.herokuapp.com/pic';
 const wsUrl = 'wss://neto-api.herokuapp.com/pic';
 
 export class Canvas {
-  constructor(editorElement, host, users, userName, isHost, roomId, imageId = null, background = '#fff') {
+  constructor(editorElement, host, users, userName, isHost, roomId, userId, imageId = null, background = '#fff') {
     this.editor = editorElement;
     this.host = host;
     this.users = users;
@@ -18,25 +19,38 @@ export class Canvas {
     this.isHost = isHost;
     this.ableToDraw = true;
     this.roomId = roomId;
+    this.userId = userId;
+    console.log(userId);
     this.imageId = imageId;
     this.loader = document.querySelector('.canvas-loader');
     this.buffer = [];
     this.lastBufferItem = null;
     this.pathBuffer = [];
     this.isQueue = false;
+    this.connectionOpts = {
+      url: connectionUrl,
+      roomId: this.roomId,
+      userId: this.userId,
+      keepConnection: true
+    }
     this.image = this.editor.querySelector('.editor__image');
     this.image.addEventListener('load', (e) => {
       this.clearCanvas();
       console.log('loaded new image');
-      this.ctx.drawImage(this.image, 0, 0);
-      this.drawBuffered();
-      if (this.buffer.length > 1)
-        this.ws.send();
+      if (this.buffer.length > 1) {
+        this.ws.send(this.image);
+        console.log('img load send');
+      }
       else {
+        this.ctx.drawImage(this.image, 0, 0);
+        this.drawBuffered();
+        this.canvasToImage(this, false, this.image);
+        // Сохранить изменения на изображении с блобом!!! Иначе очистка экрана не сработает для гостя.
         this.isQueue = false;
       }
     });
     this.canvasBuffer = new Image();
+    // this.editor.appendChild(this.canvasBuffer);
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
     this.drawOpts = {
@@ -83,16 +97,20 @@ export class Canvas {
         });
         this.ws.connection.addEventListener('close', e => console.log('connection closed'));
         this.ws.connection.addEventListener('error', e => console.log(`some ws error: ${e.data}`));
+        // Действия при выходе со страницы
         window.addEventListener('beforeunload', e => {
           this.ws.connection.close();
+          this.connectionOpts.keepConnection = false;
           if (this.isHost) {
-            console.log(this);
             Requests.deleteRoom(requestUrl, this.roomId);
+          }
+          else {
+            Requests.disconnectRoom(requestUrl, this.roomId, this.userId);
           }
         });
       },
-      send: () => {
-        this.canvasToImage()
+      send: (image = this.canvasBuffer) => {
+        this.canvasToImage(this, false, image)
           .then(res => {
             this.ws.connection.send(res);
           })
@@ -104,14 +122,15 @@ export class Canvas {
     this.editor.querySelector('#pen').classList.add('selected');
   }
 
-  canvasToImage(self = this, cleared = false) {
+  canvasToImage(self = this, cleared = false, image = this.canvasBuffer) {
     return new Promise((resolve) => {
-      this.clearCanvas();
+      self.clearCanvas();
       if (!cleared) {
-        this.ctx.drawImage(this.canvasBuffer, 0, 0);
-        this.drawBuffered();
+        // Решить пробему исчезания нарисованного изображения у гостя
+        self.ctx.drawImage(image, 0, 0);
+        self.drawBuffered();
+        self.buffer.splice(0, this.buffer.length - 1);
       }
-      this.buffer.splice(0, this.buffer.length - 1);
       self.canvas.toBlob((blob) => {
         self.canvasBuffer.src = URL.createObjectURL(blob);
         resolve(blob);
@@ -126,13 +145,14 @@ export class Canvas {
     this.initCanvas();
   }
 
-  buildUsersPanel() {
+  buildUsersPanel(users) {
     const panel = this.editor.querySelector('.users');
     panel.textContent = '';
     const usersWrapper = document.createElement('div');
+    usersWrapper.classList.add('users-wrapper');
 
     this.users.forEach(el => {
-      usersWrapper.appendChild(buildUser(el, this));
+      usersWrapper.appendChild(this.buildUser(el, this));
     });
 
     const userPanelControlls = document.createElement('div');
@@ -154,22 +174,12 @@ export class Canvas {
 
     userPanelControlls.addEventListener('click', (e, self) => onControllBtnClick(e, this));
 
+    // Действия при нажатии кнопок на панели
     function onControllBtnClick(e, self) {
       switch (e.target.dataset.btn) {
         case 'close':
           console.log('close');
-          document.querySelector('.rooms').classList.remove('hidden');
-          document.querySelector('.controlls').classList.remove('hidden');
-          document.querySelector('.editor').classList.add('hidden');
-          console.log('roomId: ' + self.roomId);
-          self.ws.connection.close();
-          if (!self.isHost) {
-            Requests.disconnectRoom(requestUrl, self.userName, self.roomId);
-          }
-          else {
-            Requests.deleteRoom(requestUrl, self.roomId);
-          }
-          self = null;
+          self.exit(self);
           break;
         case 'clear':
           if (self.isHost) {
@@ -181,50 +191,50 @@ export class Canvas {
           break;
       }
     }
+  }
 
-    function buildUser(user, self) {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('user');
+  buildUser(user, self) {
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('user');
 
-      const title = document.createElement('h3');
-      title.classList.add('user__title');
-      title.textContent = user.isHost ? 'Host: ' : 'Guest: '
+    const title = document.createElement('h3');
+    title.classList.add('user__title');
+    title.textContent = user.isHost ? 'Host: ' : 'Guest: '
 
-      const userName = document.createElement('div');
-      userName.classList.add('user__name');
-      userName.textContent = user.name;
+    const userName = document.createElement('div');
+    userName.classList.add('user__name');
+    userName.textContent = user.name;
 
-      const controlls = document.createElement('div');
-      controlls.classList.add('user__controls');
-      const togglePermission = document.createElement('button');
-      togglePermission.classList.add('user__btn');
-      togglePermission.textContent = 'D';
-      const removeGuest = document.createElement('button');
-      removeGuest.classList.add('user__btn');
-      removeGuest.textContent = 'X';
-      controlls.appendChild(togglePermission);
-      controlls.appendChild(removeGuest);
+    const controlls = document.createElement('div');
+    controlls.classList.add('user__controls');
+    const togglePermission = document.createElement('button');
+    togglePermission.classList.add('user__btn');
+    togglePermission.textContent = 'D';
+    const removeGuest = document.createElement('button');
+    removeGuest.classList.add('user__btn');
+    removeGuest.textContent = 'X';
+    controlls.appendChild(togglePermission);
+    controlls.appendChild(removeGuest);
 
-      const permissions = document.createElement('div');
-      permissions.classList.add('user__permissions');
-      const permissionTitle = document.createElement('div');
-      permissionTitle.classList.add('user__permission-title');
-      permissionTitle.textContent = 'Drawing';
-      const permissionStatus = document.createElement('div');
-      permissionStatus.classList.add('user__permission-status');
-      permissions.appendChild(permissionTitle);
-      permissions.appendChild(permissionStatus);
+    const permissions = document.createElement('div');
+    permissions.classList.add('user__permissions');
+    const permissionTitle = document.createElement('div');
+    permissionTitle.classList.add('user__permission-title');
+    permissionTitle.textContent = 'Drawing';
+    const permissionStatus = document.createElement('div');
+    permissionStatus.classList.add('user__permission-status');
+    permissions.appendChild(permissionTitle);
+    permissions.appendChild(permissionStatus);
 
-      wrapper.appendChild(title);
-      wrapper.appendChild(userName);
-      wrapper.appendChild(self.isHost ? controlls : permissions);
-      if (user.isHost) {
-        controlls.style.opacity = 0;
-        permissions.style.opacity = 0;
-      }
-
-      return wrapper;
+    wrapper.appendChild(title);
+    wrapper.appendChild(userName);
+    wrapper.appendChild(self.isHost ? controlls : permissions);
+    if (user.isHost) {
+      controlls.style.opacity = 0;
+      permissions.style.opacity = 0;
     }
+
+    return wrapper;
   }
 
   buildAsideMenu() {
@@ -436,6 +446,23 @@ export class Canvas {
     }
   }
 
+  exit(self = this) {
+    console.log('close');
+    document.querySelector('.rooms').classList.remove('hidden');
+    document.querySelector('.controlls').classList.remove('hidden');
+    document.querySelector('.editor').classList.add('hidden');
+    console.log('roomId: ' + self.roomId);
+    self.ws.connection.close();
+    if (!self.isHost) {
+      Requests.disconnectRoom(requestUrl, self.roomId, self.userId);
+    }
+    else {
+      Requests.deleteRoom(requestUrl, self.roomId);
+    }
+    self.connectionOpts.keepConnection = false;
+    self = null;
+  }
+
   initCanvas() {
     const canvas = this.canvas;
     const coords = this.coords;
@@ -475,6 +502,46 @@ export class Canvas {
       ws.connection = new WebSocket(ws.url);
       ws.setListeners();
     }
+    // Открываем поддерживаемое соединение с сервером управления комнатами
+    // И поддерживаем, пока комната существует, иначе данные о комнате удаляются
+    const onConnectionMsg = (self) => {
+      let currentUsers = self.users;
+      const buildUser = self.buildUser;
+      const exit = () => {
+        self.exit(self);
+      };
+      const buildUsersPanel = (users) => {
+        // Удаляем пользователей на панели и помещаем новых
+        const usersWrapper = document.querySelector('.users-wrapper');
+        usersWrapper.textContent = '';
+        users.forEach(user => {
+          usersWrapper.appendChild(buildUser(user, self));
+        });
+        self.users = users;
+        currentUsers = users;
+      };
+      return (res) => {
+        // Сравниваем массивы с пользователями, если различаются, перестраиваем панель
+        // Если комната, в которой находится пользователь прекратила свое существование
+        // Закрываем комнату.
+        if (res.msg === 'closed') {
+          exit();
+        }
+        else {
+          console.log(res.users);
+          const newUsers = res.users;
+          console.log(currentUsers);
+          if (newUsers[newUsers.length - 1].userId !== currentUsers[currentUsers.length - 1].userId) {
+            console.log('users changed');
+            buildUsersPanel(newUsers);
+          }
+          else {
+            console.log('no changes');
+          }
+        }
+      };
+    }
+    Requests.keepConnection(this.connectionOpts, onConnectionMsg(this));
     
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mouseup', onMouseUp);
@@ -616,6 +683,7 @@ export class Canvas {
       this.drawBuffered();
       if (!this.isQueue && this.buffer.length > 20) {
         this.isQueue = true;
+        console.log('mouse move send');
         this.ws.send();
       }
     }
@@ -626,6 +694,7 @@ export class Canvas {
       this.drawBuffered();
       if (!this.isQueue) {
         this.isQueue = true;
+        console.log('mouse up send');
         this.ws.send();
       }
 
