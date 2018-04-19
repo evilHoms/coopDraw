@@ -78,6 +78,13 @@
 
 .user__permission-status {
   padding: 1vmin;
+}
+
+.status-accepted {
+  background: green;
+}
+
+.status-denied {
   background: red;
 }
 
@@ -109,10 +116,16 @@
 
 .tool {
   display: inline-block;
-  width: 45%;
-  padding: 5px;
-  margin: 2.5%;
-  border: 1px solid black;
+  padding: 15%;
+  margin: 6.5%;
+  border: 2px solid #444;
+  text-align: center;
+
+  box-shadow: 0 0 3px 0 #888;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.8);
+
+  transition: 1s;
   cursor: pointer;
 }
 
@@ -136,10 +149,17 @@
 }
 
 .setting {
+  display: inline-block;
   width: 90%;
-  padding: 5px;
+  padding: 15px 10px;
   margin: 2.5%;
-  border: 1px solid black;
+  border: 2px solid #444;
+  text-align: center;
+
+  box-shadow: 0 0 3px 0 #888;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.8);
+
   cursor: pointer;
 }
 
@@ -149,12 +169,13 @@
 }
 
 .setting__value {
-  max-width: 20%;
+  max-width: 50%;
 }
 
 .setting__input {
   text-align: right;
   max-width: 100%;
+  border: none;
 }
 
 .option-menu__colors {
@@ -195,4 +216,58 @@
 
   cursor: pointer;
   transition: 0.6s;
+}
+
+#pen {
+  background-image: url(../images/pen.svg);
+  background-size: contain;
+  background-position: center;
+}
+
+#line {
+  background-image: url(../images/line.svg);
+  background-size: contain;
+  background-position: center;
+}
+
+#rectangle {
+  background-image: url(../images/rectangle.svg);
+  background-size: contain;
+  background-position: center;
+}
+
+#ellipse {
+  background-image: url(../images/ellipse.svg);
+  background-size: contain;
+  background-position: center;
+}
+
+#erase {
+  background-image: url(../images/eraser.svg);
+  background-size: contain;
+  background-position: center;
+}
+
+#lineWidth {
+  padding: 15px;
+  background-image: url(../images/linewidth.svg);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: 10% center;
+}
+
+#fillStyle {
+  padding: 15px;
+  background-image: url(../images/fill.svg);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: 10% center;
+}
+
+#strokeStyle {
+  padding: 15px;
+  background-image: url(../images/stroke.svg);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: 10% center;
 }

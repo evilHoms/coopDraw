@@ -77,15 +77,27 @@ const changeRoomUsers = (req, res) => {
   let userId = null;
   switch (req.body.action) {
     case 'connect':
-      console.log('connected');
-      userId = generateUserId(req.body.name);
-      console.log(userId);
-      room.users.push({
-        userId: userId,
-        name: req.body.name, 
-        ableToDraw: false, 
-        isHost: false
-      });
+      if (room.password === req.body.password) {
+        console.log('connected');
+        userId = generateUserId(req.body.name);
+        console.log(userId);
+        room.users.push({
+          userId: userId,
+          name: req.body.name, 
+          ableToDraw: false, 
+          isHost: false
+        });
+        const body = Object.assign({userId: userId}, room);
+        res.writeHead(200, headers);
+        res.write(JSON.stringify(body));
+        res.end();
+      }
+      else {
+        const body = {msg: 'denied'};
+        res.writeHead(200, headers);
+        res.write(JSON.stringify(body));
+        res.end();
+      }
       break;
     case 'disconnect':
       console.log('disconnect');
@@ -97,11 +109,12 @@ const changeRoomUsers = (req, res) => {
           return true;
         }
       }); 
+      const body = room ? room : {msg: 'empty'};
+      res.writeHead(200, headers);
+      res.write(JSON.stringify(body));
+      res.end();
+      break;
   }
-  const body = Object.assign({userId: userId}, room);
-  res.writeHead(200, headers);
-  res.write(JSON.stringify(body));
-  res.end();
 }
 
 const setImageId = (req, res) => {

@@ -50,7 +50,7 @@ export class Canvas {
       }
     });
     this.canvasBuffer = new Image();
-    // this.editor.appendChild(this.canvasBuffer);
+    //this.editor.appendChild(this.canvasBuffer);
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
     this.drawOpts = {
@@ -207,14 +207,14 @@ export class Canvas {
 
     const controlls = document.createElement('div');
     controlls.classList.add('user__controls');
-    const togglePermission = document.createElement('button');
-    togglePermission.classList.add('user__btn');
-    togglePermission.textContent = 'D';
-    const removeGuest = document.createElement('button');
-    removeGuest.classList.add('user__btn');
-    removeGuest.textContent = 'X';
-    controlls.appendChild(togglePermission);
-    controlls.appendChild(removeGuest);
+    // const togglePermission = document.createElement('button');
+    // togglePermission.classList.add('user__btn');
+    // togglePermission.textContent = 'D';
+    // const removeGuest = document.createElement('button');
+    // removeGuest.classList.add('user__btn');
+    // removeGuest.textContent = 'X';
+    // controlls.appendChild(togglePermission);
+    // controlls.appendChild(removeGuest);
 
     const permissions = document.createElement('div');
     permissions.classList.add('user__permissions');
@@ -223,6 +223,7 @@ export class Canvas {
     permissionTitle.textContent = 'Drawing';
     const permissionStatus = document.createElement('div');
     permissionStatus.classList.add('user__permission-status');
+    permissionStatus.classList.add('status-accepted');
     permissions.appendChild(permissionTitle);
     permissions.appendChild(permissionStatus);
 
@@ -242,15 +243,16 @@ export class Canvas {
     const tools = [
       'pen',        'line',
       'rectangle',  'ellipse',
-      '',           '',
-      'erase'
+      '',           ''
     ];
+
+    this.isHost && tools.push('erase');
 
     const settings = [
       'lineWidth',
       'fillStyle',  
-      'strokeStyle',
-      'backgroundColor'
+      'strokeStyle'/*,
+      'backgroundColor'*/
     ];
 
     const toolsWrapper = document.createElement('div');
@@ -277,7 +279,6 @@ export class Canvas {
       else {
         element.classList.add('tool');
         element.id = tool;
-        element.textContent = tool;
         element.addEventListener('click', (e) => {
           onToolClick(e, self);
         });
@@ -298,7 +299,7 @@ export class Canvas {
       name.classList.add('setting__name')
       const value = document.createElement('div');
       value.classList.add('setting__value');
-      name.textContent = element + ': ';
+      //name.textContent = element + ': ';
       switch (element) {
         case 'lineWidth':
           const widthInput = document.createElement('input');
@@ -652,6 +653,23 @@ export class Canvas {
               ctx.fill();
               ctx.closePath();
             }
+            break;
+          case 'erase':
+            console.log(buffer);
+            if (buffer[i].pos === 'first' || i === 0 && (buffer[i].pos === 'last' || buffer[i].pos === 'reg')) {
+              ctx.moveTo(buffer[i].x, buffer[i].y);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+            }
+            else {
+              ctx.lineTo(buffer[i].x, buffer[i].y);
+              ctx.save();
+              ctx.strokeStyle = '#000';
+              ctx.globalCompositeOperation = 'destination-out';
+              ctx.lineWidth = buffer[i].lineWidth;
+              ctx.stroke();
+              ctx.restore();
+            } 
+            this.lastBufferItem = 'erase';
+            break;
         }
       }
     }
@@ -811,28 +829,53 @@ export class Canvas {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
       ctx.beginPath();
-      ctx.moveTo(coords.x1, coords.y1);
+      // ctx.moveTo(coords.x1, coords.y1);
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({x: coords.x1, y: coords.y1, type: 'erase', pos: 'first'});
+      this.drawBuffered();
     }
     else if (!this.drawOpts.isLastPoint) {
-      ctx.lineTo(coords.xCur, coords.yCur);
-      ctx.save();
-      ctx.strokeStyle = '#000';
-      ctx.globalCompositeOperation = 'destination-out';
-      console.log(this.options.lineWidth);
-      ctx.lineWidth = options.lineWidth;
-      ctx.stroke();
-      ctx.restore();
+      // ctx.lineTo(coords.xCur, coords.yCur);
+      // ctx.save();
+      // ctx.strokeStyle = '#000';
+      // ctx.globalCompositeOperation = 'destination-out';
+      // console.log(this.options.lineWidth);
+      // ctx.lineWidth = options.lineWidth;
+      // ctx.stroke();
+      // ctx.restore();
+      this.clearCanvas()
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({x: coords.xCur, y: coords.yCur, type: 'erase', pos: 'reg', lineWidth: options.lineWidth});
+      this.drawBuffered();
+      if (!this.isQueue && this.buffer.length > 20) {
+        this.isQueue = true;
+        console.log('mouse move send');
+        this.ws.send();
+      }
     }
     else {
-      ctx.lineTo(coords.x2, coords.y2);
-      ctx.save();
-      ctx.strokeStyle = '#000';
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = options.lineWidth;
-      ctx.stroke();
-      ctx.restore();
+      // ctx.lineTo(coords.x2, coords.y2);
+      // ctx.save();
+      // ctx.strokeStyle = '#000';
+      // ctx.globalCompositeOperation = 'destination-out';
+      // ctx.lineWidth = options.lineWidth;
+      // ctx.stroke();
+      // ctx.restore();
 
-      this.ws.send();
+      // this.ws.send();
+
+      // coords.x1 = coords.xCur;
+      // coords.y1 = coords.yCur;
+      this.clearCanvas()
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({x: coords.x2, y: coords.y2, type: 'erase', pos: 'last', lineWidth: options.lineWidth});
+      this.drawBuffered();
+      if (!this.isQueue) {
+        this.isQueue = true;
+        console.log('mouse up send');
+        this.ws.send();
+      }
 
       coords.x1 = coords.xCur;
       coords.y1 = coords.yCur;

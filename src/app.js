@@ -4,6 +4,7 @@ import './main.scss';
 import { Room } from './room/room.js';
 import { Requests } from './request/request.js';
 import { Popup } from './popup/popup.js';
+import { Notice } from './notice/notice.js';
 import { Canvas } from './canvas/canvas';
 import config from '../config.json';
 
@@ -84,9 +85,16 @@ function onPopupSubmitClick(e) {
       //Создается объект canvas
       .then(res => {
         console.log(res);
-        document.querySelector('.rooms').classList.add('hidden');
-        document.querySelector('.controlls').classList.add('hidden');
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, roomId, res.userId, res.imageId, res.background);
+        if (res.msg === 'denied') {
+          console.log('Access denied');
+          const notice = new Notice('Access denied', 'Wrong password');
+          root.appendChild(notice.notice);
+        }
+        else {
+          document.querySelector('.rooms').classList.add('hidden');
+          document.querySelector('.controlls').classList.add('hidden');
+          editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, false, roomId, res.userId, res.imageId, res.background);
+        }
       })
       .catch(er => console.log(er));
   }
