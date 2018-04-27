@@ -68,15 +68,21 @@ function onPopupSubmitClick(e) {
   console.log(name, pass);
 
   if (this.dataset.type === 'newRoom') {
-    Requests.newRoom(requestUrl, name, pass)
-      //Создается объект canvas
-      .then(res => {
-        document.querySelector('.rooms').classList.add('hidden');
-        document.querySelector('.controlls').classList.add('hidden');
-        console.log(res.userId);
-        editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true, res.roomId, res.userId);
-      })
-      .catch(er => console.log(er));
+    if (name.length > 0) {
+      Requests.newRoom(requestUrl, name, pass)
+        //Создается объект canvas
+        .then(res => {
+          document.querySelector('.rooms').classList.add('hidden');
+          document.querySelector('.controlls').classList.add('hidden');
+          console.log(res.userId);
+          editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true, res.roomId, res.userId);
+        })
+        .catch(er => console.log(er));
+    }
+    else {
+      const notice = new Notice('Empty name', 'You must enter "Name" field');
+      root.appendChild(notice.notice);
+    }
   }
   else if (this.dataset.type === 'connectRoom') {
     const roomId = e.currentTarget.dataset.roomId;

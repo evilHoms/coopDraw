@@ -1,7 +1,8 @@
-
+import config from '../config.json';
 // Отрпавка начальной страницы
 const rootHandler = (req, res) => {
-  const staticPath = '/public';
+  const hostname = process.env.PRODUCTION ? config.hostname : config.localhost;
+  const staticPath = process.env.PRODUCTION ? '/public' : '/';
   res.writeHead(200);
   res.write(
     `
@@ -13,7 +14,7 @@ const rootHandler = (req, res) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <meta http-equiv="X-UA-Compatible" content="ie=edge">
     
-      <link href="${staticPath}/main.css" rel="stylesheet">
+      <link href="${hostname + staticPath}/main.css" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css?family=Architects+Daughter" rel="stylesheet">
       <link href="https://fonts.googleapis.com/css?family=Lato:400,700" rel="stylesheet">
     
@@ -61,7 +62,7 @@ const rootHandler = (req, res) => {
         </section>
     
       </div>
-      <script src="${staticPath}/bundle.js"></script>
+      <script src="${hostname + staticPath}/bundle.js"></script>
     </body>
     </html>
     `

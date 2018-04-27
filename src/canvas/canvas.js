@@ -20,7 +20,6 @@ export class Canvas {
     this.ableToDraw = true;
     this.roomId = roomId;
     this.userId = userId;
-    console.log(userId);
     this.imageId = imageId;
     this.loader = document.querySelector('.canvas-loader');
     this.buffer = [];
@@ -53,6 +52,10 @@ export class Canvas {
     //this.editor.appendChild(this.canvasBuffer);
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
+    this.canvasWidth = window.innerWidth * 4.2 / 5;
+    this.canvasHeight = window.innerHeight * 91 / 100;
+    this.canvasSizeDif = this.canvasWidth / this.canvasHeight;
+    console.log(this.canvasSizeDif);
     this.drawOpts = {
       isFirstPoint: true,
       isLastPoint: false
@@ -80,7 +83,7 @@ export class Canvas {
       url: null,
       connection: null,
       setListeners: () => {
-        this.ws.connection.addEventListener('open', e => console.log('connection opened'));
+        this.ws.connection.addEventListener('open', e => console.log('ws connection opened'));
         this.ws.connection.addEventListener('message', e => {
           console.log(`new ws message: ${e.data}`);
           const data = JSON.parse(e.data);
@@ -196,6 +199,9 @@ export class Canvas {
   buildUser(user, self) {
     const wrapper = document.createElement('div');
     wrapper.classList.add('user');
+    if (user.userId === self.userId) {
+      wrapper.classList.add('you');
+    }
 
     const title = document.createElement('h3');
     title.classList.add('user__title');
@@ -302,19 +308,25 @@ export class Canvas {
       //name.textContent = element + ': ';
       switch (element) {
         case 'lineWidth':
+          const lineWidthPoint = document.createElement('div');
+          lineWidthPoint.classList.add('line-width-point');
           const widthInput = document.createElement('input');
           widthInput.classList.add('setting__input');
           widthInput.value = self.options.lineWidth;
           widthInput.addEventListener('input', (e) => {
             self.options.lineWidth = e.currentTarget.value;
+            lineWidthPoint.style.width = e.currentTarget.value + 'px';
           });
+          name.appendChild(lineWidthPoint);
           value.appendChild(widthInput);
           break;
         case 'strokeStyle':
-          value.textContent = self.options.strokeStyle;
+          //value.textContent = self.options.strokeStyle;
+          value.style.backgroundColor = self.options.strokeStyle;
           break;
         case 'fillStyle':
-          value.textContent = self.options.fillStyle;
+          //value.textContent = self.options.fillStyle;
+          value.style.backgroundColor = self.options.fillStyle;
           break;
         case 'backgroundColor':
           value.textContent = self.options.backgroundColor;
@@ -367,13 +379,18 @@ export class Canvas {
     const title = document.createElement('h3');
     const colorsWrapper = document.createElement('div');
     colorsWrapper.classList.add('option-menu__colors');
-    setColors(this);
+    const currentColor = document.createElement('div');
+    currentColor.classList.add('option-menu__current-color');
+    setColors(this, option);
     const optionInput = document.createElement('input');
     optionInput.classList.add('option-menu__input');
     optionInput.value = this.options[option];
     const cansel = document.createElement('button');
-    cansel.textContent = 'Cansel';
+    cansel.classList.add('option-menu__cansel-btn');
+    cansel.textContent = 'Ok';
     cansel.dataset.btn = 'cansel';
+    const currentColorLable = document.createElement('p');
+    currentColorLable.textContent = 'Current color';
 
     switch (option) {
       case 'strokeStyle':
@@ -396,6 +413,8 @@ export class Canvas {
     wrapper.appendChild(title);
     wrapper.appendChild(colorsWrapper);
     wrapper.appendChild(optionInput);
+    wrapper.appendChild(currentColorLable);
+    wrapper.appendChild(currentColor);
     wrapper.appendChild(cansel);
     console.log(currentOptionBtn.getBoundingClientRect().y, parseFloat(getComputedStyle(usersMenu).height), currentOptionBtn.offsetHeight);
 
@@ -431,15 +450,29 @@ export class Canvas {
       }
     }
 
-    function setColors(self) {
+    function setColors(self, option) {
+      switch (option) {
+        case 'strokeStyle':
+          currentColor.style.backgroundColor = self.options.strokeStyle;
+          break;
+        case 'fillStyle':
+          currentColor.style.backgroundColor = self.options.fillStyle;
+          break;
+      }
       colors.forEach(el => {
         const color = document.createElement('div');
         color.classList.add('option-menu__color');
         color.style.backgroundColor = el;
         color.dataset.color = el;
+        
         color.addEventListener('click', (e) => {
           optionInput.value = e.target.dataset.color;
-          currentOptionBtn.querySelector('.setting__value').textContent = optionInput.value;
+          const colorsPopup = e.target.parentElement.parentElement
+          colorsPopup.parentElement.removeChild(colorsPopup);
+          currentColor.style.backgroundColor = e.target.dataset.color;
+          const value = currentOptionBtn.querySelector('.setting__value');
+          //value.textContent = optionInput.value;
+          value.style.backgroundColor = optionInput.value;
           setOption(option, e.target.dataset.color, self);
         });
         colorsWrapper.appendChild(color);
@@ -474,8 +507,10 @@ export class Canvas {
     const ws = this.ws;
 
     // Размеры  канвы, за вычетом верхней и боковой панелей
-    canvas.width = window.innerWidth * 4.2 / 5;
-    canvas.height = window.innerHeight * 91 / 100;
+    canvas.width = this.canvasWidth;
+    canvas.height = this.canvasHeight;
+    window.addEventListener('resize', onCanvasResize.bind(this));
+    console.log(canvas);
     this.clearCanvas();
     canvas.style.backgroundColor = this.options.backgroundColor;
     this.image.style.left = this.canvas.getBoundingClientRect().left + 'px';
@@ -492,6 +527,7 @@ export class Canvas {
           Requests.setImageId(requestUrl, this.roomId, this.imageId)
             .then(console.log)
             .catch(console.log);
+          console.log('connecting to ws server...');
           ws.url = `wss://neto-api.herokuapp.com/pic/${this.imageId}`;
           ws.connection = new WebSocket(ws.url);
           ws.setListeners();
@@ -546,6 +582,15 @@ export class Canvas {
     
     canvas.addEventListener('mousedown', onMouseDown);
     canvas.addEventListener('mouseup', onMouseUp);
+
+    function onCanvasResize(e) {
+      console.log('resize');
+      this.canvasWidth = window.innerWidth * 4.2 / 5;
+      this.canvasHeight = window.innerHeight * 91 / 100;
+      this.canvas.height = this.canvasHeight;
+      this.canvas.width = this.canvasWidth;
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+    }
 
     function onMouseDown(e) {
       canvas.addEventListener('mousemove', onMouseMove);
@@ -769,7 +814,7 @@ export class Canvas {
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
-      ctx.drawImage(this.image, 0, 0);
+      ctx.drawImage(this.canvasBuffer, 0, 0);
       if (this.pathBuffer.length) {
         this.pathBuffer.splice(0, this.pathBuffer.length);
       }
@@ -777,11 +822,11 @@ export class Canvas {
       this.drawBuffered(this.pathBuffer);
     }
     else {
-      this.clearCanvas();
-      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      // this.clearCanvas();
+      // this.ctx.drawImage(this.canvasBuffer, 0, 0);
       this.buffer.push({type: 'rect', pos: 'first'});
       this.buffer.push({x1: coords.x1, y1: coords.y1, x2: coords.xCur - coords.x1, y2: coords.yCur - coords.y1, type: 'rect'});
-      this.drawBuffered();
+      // this.drawBuffered();
       this.ws.send();
     }
   }
@@ -801,7 +846,7 @@ export class Canvas {
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
-      ctx.drawImage(this.image, 0, 0);
+      ctx.drawImage(this.canvasBuffer, 0, 0);
       if (this.pathBuffer.length) {
         this.pathBuffer.splice(0, this.pathBuffer.length);
       }
@@ -810,12 +855,12 @@ export class Canvas {
       this.drawBuffered(this.pathBuffer);
     }
     else {
-      this.clearCanvas();
-      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      // this.clearCanvas();
+      // this.ctx.drawImage(this.canvasBuffer, 0, 0);
       this.buffer.push({type: 'ellipse', pos: 'first'});
       this.buffer.push({x: coords.x1, y: coords.y1, dx: Math.abs(coords.xCur - coords.x1), 
                         dy: Math.abs(coords.yCur - coords.y1), type: 'ellipse'});
-      this.drawBuffered();
+      // this.drawBuffered();
       this.ws.send();
     }
   }

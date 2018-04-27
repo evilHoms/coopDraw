@@ -11,6 +11,12 @@ export class Popup {
     this.popup.addEventListener('click', eventHendler);
   }
 
+  onEnterPress(e) {
+    if (e.code === 'Enter') {
+      this.submitButton.click();
+    }
+  }
+
   createPopup() {
     this.popup = (() => {
       const popup = document.createElement('div');
@@ -57,6 +63,9 @@ export class Popup {
       const submitButton = document.createElement('button');
       submitButton.classList.add('popup__submit--btn');
       submitButton.textContent = 'submit';
+      this.submitButton = submitButton;
+
+      popup.addEventListener('keyup', this.onEnterPress.bind(this));
 
       main.appendChild(title);
       main.appendChild(nameWrapper);
