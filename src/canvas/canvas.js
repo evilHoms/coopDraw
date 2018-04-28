@@ -41,10 +41,7 @@ export class Canvas {
         console.log('img load send');
       }
       else {
-        this.ctx.drawImage(this.image, 0, 0);
-        this.drawBuffered();
         this.canvasToImage(this, false, this.image);
-        // Сохранить изменения на изображении с блобом!!! Иначе очистка экрана не сработает для гостя.
         this.isQueue = false;
       }
     });
@@ -113,6 +110,7 @@ export class Canvas {
         });
       },
       send: (image = this.canvasBuffer) => {
+        // УЧИТЫВАТЬ ОЧЕРЕДЬ!!!
         this.canvasToImage(this, false, image)
           .then(res => {
             this.ws.connection.send(res);
@@ -125,11 +123,16 @@ export class Canvas {
     this.editor.querySelector('#pen').classList.add('selected');
   }
 
+  sendCanvas() {
+    // Посылать изображения через данную функцию
+    // Добавить в очередь, если уже отправлен запрос и не получен ответ
+
+  }
+
   canvasToImage(self = this, cleared = false, image = this.canvasBuffer) {
     return new Promise((resolve) => {
       self.clearCanvas();
       if (!cleared) {
-        // Решить пробему исчезания нарисованного изображения у гостя
         self.ctx.drawImage(image, 0, 0);
         self.drawBuffered();
         self.buffer.splice(0, this.buffer.length - 1);
@@ -795,7 +798,11 @@ export class Canvas {
       this.buffer.push({x: coords.x1, y: coords.y1, type: 'line', pos: 'first'});
       this.buffer.push({x: coords.x2, y: coords.y2, type: 'line', pos: 'last'});
       this.drawBuffered();
-      this.ws.send();
+      if (!this.isQueue) {
+        this.isQueue = true;
+        console.log('mouse up send');
+        this.ws.send();
+      }
     }
   }
 
@@ -822,12 +829,16 @@ export class Canvas {
       this.drawBuffered(this.pathBuffer);
     }
     else {
-      // this.clearCanvas();
-      // this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
       this.buffer.push({type: 'rect', pos: 'first'});
       this.buffer.push({x1: coords.x1, y1: coords.y1, x2: coords.xCur - coords.x1, y2: coords.yCur - coords.y1, type: 'rect'});
-      // this.drawBuffered();
-      this.ws.send();
+      this.drawBuffered();
+      if (!this.isQueue) {
+        this.isQueue = true;
+        console.log('mouse up send');
+        this.ws.send();
+      }
     }
   }
 
@@ -855,13 +866,17 @@ export class Canvas {
       this.drawBuffered(this.pathBuffer);
     }
     else {
-      // this.clearCanvas();
-      // this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
       this.buffer.push({type: 'ellipse', pos: 'first'});
       this.buffer.push({x: coords.x1, y: coords.y1, dx: Math.abs(coords.xCur - coords.x1), 
                         dy: Math.abs(coords.yCur - coords.y1), type: 'ellipse'});
-      // this.drawBuffered();
-      this.ws.send();
+      this.drawBuffered();
+      if (!this.isQueue) {
+        this.isQueue = true;
+        console.log('mouse up send');
+        this.ws.send();
+      }
     }
   }
 
