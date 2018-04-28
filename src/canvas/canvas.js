@@ -427,13 +427,16 @@ export class Canvas {
       switch (e.target.dataset.btn) {
         case 'cansel':
           e.currentTarget.parentElement.removeChild(e.currentTarget);
+          const value = currentOptionBtn.querySelector('.setting__value');
+          value.style.backgroundColor = optionInput.value;
           break;
       }
     }
 
     function onOptionInput(e, self) {
       setOption(e.currentTarget.dataset.type, optionInput.value, self);
-      currentOptionBtn.querySelector('.setting__value').textContent = optionInput.value;
+      currentColor.style.backgroundColor = optionInput.value;
+      //currentOptionBtn.querySelector('.setting__value').textContent = optionInput.value;
     }
 
     function setOption(type, value, self) {
