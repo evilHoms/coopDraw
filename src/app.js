@@ -9,8 +9,9 @@ import { Canvas } from './canvas/canvas';
 import config from '../config.json';
 
 // Адрес один, тк различаются типом запроса GET POST DELETE
-const { hostname } = config;
+const hostname = location.hostname === 'localhost' ? 'http://localhost:3000' : config.hostname ;
 const requestUrl = hostname + '/rooms';
+console.log(requestUrl);
 
 const root = document.querySelector('#root');
 const newRoomBtn = document.querySelector(`.new-room--btn`);
@@ -68,7 +69,7 @@ function onPopupSubmitClick(e) {
   console.log(name, pass);
 
   if (this.dataset.type === 'newRoom') {
-    if (name.length > 0) {
+    //if (name.length > 0) {
       Requests.newRoom(requestUrl, name, pass)
         //Создается объект canvas
         .then(res => {
@@ -78,11 +79,11 @@ function onPopupSubmitClick(e) {
           editor = new Canvas(document.querySelector('.editor'), res.host, res.users, name, true, res.roomId, res.userId);
         })
         .catch(er => console.log(er));
-    }
-    else {
-      const notice = new Notice('Empty name', 'You must enter "Name" field');
-      root.appendChild(notice.notice);
-    }
+    //}
+    //else {
+    //  const notice = new Notice('Empty name', 'You must enter "Name" field');
+    //  root.appendChild(notice.notice);
+    //}
   }
   else if (this.dataset.type === 'connectRoom') {
     const roomId = e.currentTarget.dataset.roomId;

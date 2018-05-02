@@ -7,6 +7,7 @@ export class Popup {
     this.type = type;
     this.popup = null;
     this.roomId = roomId;
+    this.submitButton = null;
     this.createPopup();
     this.popup.addEventListener('click', eventHendler);
   }
@@ -15,6 +16,12 @@ export class Popup {
     if (e.code === 'Enter') {
       this.submitButton.click();
     }
+  }
+
+  onNameInput(e, submitBtn) {
+    this.submitButton.disabled = false;
+    e.currentTarget.value === '' && (this.submitButton.disabled = true);
+    
   }
 
   createPopup() {
@@ -63,8 +70,10 @@ export class Popup {
       const submitButton = document.createElement('button');
       submitButton.classList.add('popup__submit--btn');
       submitButton.textContent = 'submit';
+      submitButton.disabled = true;
       this.submitButton = submitButton;
 
+      nameInput.addEventListener('input', this.onNameInput.bind(this));
       popup.addEventListener('keyup', this.onEnterPress.bind(this));
 
       main.appendChild(title);

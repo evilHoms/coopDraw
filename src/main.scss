@@ -4,6 +4,10 @@
   padding: 0;
 }
 
+body {
+  overflow: hidden;
+}
+
 #root {
   background: #aaa url('./images/wood.png');
   min-height: 100vh;
@@ -108,5 +112,6 @@
 }
 
 .selected {
-  transform: scale(0.8);
+  transform: scale(0.85);
+  box-shadow: 0 0 7px 5px red !important;
 }

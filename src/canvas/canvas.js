@@ -4,7 +4,7 @@ import { Requests } from '../request/request.js';
 import './canvas.scss';
 import config from '../../config.json';
 
-const { hostname } = config;
+const hostname = location.hostname === 'localhost' ? 'http://localhost:3000' : config.hostname ;
 const requestUrl = hostname + '/rooms';
 const connectionUrl = hostname + '/connection';
 const imageUrl = 'https://neto-api.herokuapp.com/pic';
@@ -23,7 +23,7 @@ export class Canvas {
     this.imageId = imageId;
     this.loader = document.querySelector('.canvas-loader');
     this.buffer = [];
-    this.lastBufferItem = null;
+    //this.lastBufferItem = null;
     this.pathBuffer = [];
     this.isQueue = false;
     this.connectionOpts = {
@@ -49,7 +49,7 @@ export class Canvas {
     //this.editor.appendChild(this.canvasBuffer);
     this.canvas = this.editor.querySelector('#canvas');
     this.ctx = canvas.getContext('2d');
-    this.canvasWidth = window.innerWidth * 4.2 / 5;
+    this.canvasWidth = window.innerWidth;
     this.canvasHeight = window.innerHeight * 91 / 100;
     this.canvasSizeDif = this.canvasWidth / this.canvasHeight;
     console.log(this.canvasSizeDif);
@@ -110,7 +110,6 @@ export class Canvas {
         });
       },
       send: (image = this.canvasBuffer) => {
-        // УЧИТЫВАТЬ ОЧЕРЕДЬ!!!
         this.canvasToImage(this, false, image)
           .then(res => {
             this.ws.connection.send(res);
@@ -121,12 +120,6 @@ export class Canvas {
 
     this.init();
     this.editor.querySelector('#pen').classList.add('selected');
-  }
-
-  sendCanvas() {
-    // Посылать изображения через данную функцию
-    // Добавить в очередь, если уже отправлен запрос и не получен ответ
-
   }
 
   canvasToImage(self = this, cleared = false, image = this.canvasBuffer) {
@@ -252,6 +245,7 @@ export class Canvas {
     const tools = [
       'pen',        'line',
       'rectangle',  'ellipse',
+      'triangle',   '',
       '',           ''
     ];
 
@@ -277,8 +271,12 @@ export class Canvas {
       addSettingElement(settingsWrapper, el, this);
     });
 
+    const showHideArrow = document.createElement('div');
+    showHideArrow.classList.add('show-hide-arrow');
+
     aside.appendChild(toolsWrapper);
     aside.appendChild(settingsWrapper);
+    aside.appendChild(showHideArrow);
 
     function addAsideElement(wrapper, tool, self) {
       const element = document.createElement('div');
@@ -309,6 +307,7 @@ export class Canvas {
       const value = document.createElement('div');
       value.classList.add('setting__value');
       //name.textContent = element + ': ';
+
       switch (element) {
         case 'lineWidth':
           const lineWidthPoint = document.createElement('div');
@@ -316,10 +315,9 @@ export class Canvas {
           const widthInput = document.createElement('input');
           widthInput.classList.add('setting__input');
           widthInput.value = self.options.lineWidth;
-          widthInput.addEventListener('input', (e) => {
-            self.options.lineWidth = e.currentTarget.value;
-            lineWidthPoint.style.width = e.currentTarget.value + 'px';
-          });
+          widthInput.addEventListener('input', 
+            (e) => lineWidthInputHandler(e, self, lineWidthPoint)
+          );
           name.appendChild(lineWidthPoint);
           value.appendChild(widthInput);
           break;
@@ -340,6 +338,24 @@ export class Canvas {
       title.appendChild(value);
       settingElement.appendChild(title);
       wrapper.appendChild(settingElement);
+    }
+
+    function lineWidthInputHandler (e, self, pointView) {
+      const lastItemPattern = /\d/;
+      const value = e.currentTarget.value;
+      if (value.length < 1) {
+        e.currentTarget.value = 0;
+      }
+      else if (lastItemPattern.test(value[value.length - 1])) {
+        self.options.lineWidth = value;
+        pointView.style.width = value + 'px';
+      }
+      else {
+        e.currentTarget.value = value.slice(0, -1);
+      }    
+      if (value.length > 1 && value[0] == 0) {
+        e.currentTarget.value = value.slice(1);
+      }  
     }
 
     function onToolClick(e, self) {
@@ -379,6 +395,7 @@ export class Canvas {
     ]
     const wrapper = document.createElement('div');
     wrapper.classList.add('option-menu');
+    wrapper.dataset.isValid = true;
     const title = document.createElement('h3');
     const colorsWrapper = document.createElement('div');
     colorsWrapper.classList.add('option-menu__colors');
@@ -390,8 +407,12 @@ export class Canvas {
     optionInput.value = this.options[option];
     const cansel = document.createElement('button');
     cansel.classList.add('option-menu__cansel-btn');
-    cansel.textContent = 'Ok';
+    cansel.textContent = 'Accept';
     cansel.dataset.btn = 'cansel';
+    const close = document.createElement('button');
+    close.classList.add('option-menu__cansel-btn');
+    close.textContent = 'Cansel';
+    close.dataset.btn = 'close';
     const currentColorLable = document.createElement('p');
     currentColorLable.textContent = 'Current color';
 
@@ -419,23 +440,52 @@ export class Canvas {
     wrapper.appendChild(currentColorLable);
     wrapper.appendChild(currentColor);
     wrapper.appendChild(cansel);
+    wrapper.appendChild(close);
     console.log(currentOptionBtn.getBoundingClientRect().y, parseFloat(getComputedStyle(usersMenu).height), currentOptionBtn.offsetHeight);
 
     return wrapper;
 
     function onBtnClick(e, self) {
+      const value = currentOptionBtn.querySelector('.setting__value');
       switch (e.target.dataset.btn) {
         case 'cansel':
+          setOption(e.currentTarget.dataset.type, optionInput.value, self);
           e.currentTarget.parentElement.removeChild(e.currentTarget);
-          const value = currentOptionBtn.querySelector('.setting__value');
           value.style.backgroundColor = optionInput.value;
+          break;
+        case 'close':
+          console.log('here');
+          console.log(optionInput.value);
+          optionInput.value = value.style.backgroundColor;
+          e.currentTarget.parentElement.removeChild(e.currentTarget);
+          console.log(optionInput.value);
           break;
       }
     }
 
     function onOptionInput(e, self) {
-      setOption(e.currentTarget.dataset.type, optionInput.value, self);
-      currentColor.style.backgroundColor = optionInput.value;
+      const colorPattern = /^#(\d|[a-f]|[A-F]){3}$|^#(\d|[a-f]|[A-F]){6}$/;
+      if (colorPattern.test(optionInput.value)) {
+        //setOption(e.currentTarget.dataset.type, optionInput.value, self);
+        currentColor.style.backgroundColor = optionInput.value;
+        optionInput.style.border = '';
+        e.currentTarget.dataset.isValid = true;
+      }
+      else {
+        optionInput.style.border = '2px solid red';
+        e.currentTarget.dataset.isValid = false;
+      }
+      const okBtn = e.currentTarget.querySelector('.option-menu__cansel-btn');
+      console.log(e.currentTarget.dataset.isValid === 'true');   
+      if (e.currentTarget.dataset.isValid === 'true') {
+        okBtn.disabled = false;
+        console.log('disable');
+      }
+      else {
+        console.log('enable');
+        okBtn.disabled = true;
+      }
+      
       //currentOptionBtn.querySelector('.setting__value').textContent = optionInput.value;
     }
 
@@ -591,7 +641,7 @@ export class Canvas {
 
     function onCanvasResize(e) {
       console.log('resize');
-      this.canvasWidth = window.innerWidth * 4.2 / 5;
+      this.canvasWidth = window.innerWidth;
       this.canvasHeight = window.innerHeight * 91 / 100;
       this.canvas.height = this.canvasHeight;
       this.canvas.width = this.canvasWidth;
@@ -616,6 +666,7 @@ export class Canvas {
       coords.xCur = Math.round(e.pageX - canvasBoundingRect.x);
       coords.yCur = Math.round(e.pageY - canvasBoundingRect.y);
       draw(tool.current, self);
+      console.log(e.pageX, e.pageY);
     }
 
     function onMouseUp(e) {
@@ -650,6 +701,9 @@ export class Canvas {
         case 'ellipse':
           self.drawEllipse();
           break;
+        case 'triangle':
+          self.drawTriangle();
+          break;
         case 'erase':
           self.erase();
           break;
@@ -658,20 +712,19 @@ export class Canvas {
   }
 
   drawBuffered(buffer = this.buffer) {
-    const ctx = this.ctx;
+    const ctx = this.ctx; 
     if (buffer.length > 0) {
       for (let i = 0; i < buffer.length; i++) {
         switch (buffer[i].type) {
           case 'point':
-            console.log(this.isQueue, this.lastBufferItem);
             if (buffer[i].pos === 'first' || i === 0 && (buffer[i].pos === 'last' || buffer[i].pos === 'reg')) {
+              ctx.beginPath();
               ctx.moveTo(buffer[i].x, buffer[i].y);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
             }
             else {
               ctx.lineTo(buffer[i].x, buffer[i].y);
               ctx.stroke();
             } 
-            this.lastBufferItem = 'point';
             break;
           case 'line':
             console.log('draw line');
@@ -681,10 +734,12 @@ export class Canvas {
                 ctx.moveTo(buffer[i].x, buffer[i].y);
               }
               else {
-                ctx.lineTo(buffer[i].x, buffer[i].y);
-                ctx.stroke();
+                if ((buffer[i - 1] && buffer[i - 1].pos === 'first') || 
+                   (buffer[i].isPath && buffer[i].pos === 'last'))  {
+                  ctx.lineTo(buffer[i].x, buffer[i].y);
+                  ctx.stroke();
+                }
               }
-              this.lastBufferItem = 'line';
               break;
             }
           case 'rect':
@@ -705,6 +760,19 @@ export class Canvas {
               ctx.closePath();
             }
             break;
+          case 'triangle':
+            if (buffer[i].isPath || i !== 0) {
+              console.log('draw triangle');
+              ctx.beginPath();
+              ctx.moveTo(buffer[i].x1, buffer[i].y1);
+              ctx.lineTo(buffer[i].x2, buffer[i].y2);
+              ctx.lineTo(buffer[i].x1 - (buffer[i].x2 - buffer[i].x1), buffer[i].y2);
+              ctx.lineTo(buffer[i].x1, buffer[i].y1);
+              ctx.stroke();
+              ctx.fill();
+              ctx.closePath();
+            }
+            break;
           case 'erase':
             console.log(buffer);
             if (buffer[i].pos === 'first' || i === 0 && (buffer[i].pos === 'last' || buffer[i].pos === 'reg')) {
@@ -719,11 +787,19 @@ export class Canvas {
               ctx.stroke();
               ctx.restore();
             } 
-            this.lastBufferItem = 'erase';
+            //this.lastBufferItem = 'erase';
             break;
         }
       }
     }
+  }
+
+  setCtxOpts(context) {
+    context.strokeStyle = this.options.strokeStyle;
+    context.fillStyle = this.options.fillStyle;
+    context.lineWidth = this.options.lineWidth;
+    context.lineCap = this.options.lineCap;
+    context.lineJoin = this.options.lineJoin;
   }
 
   drawPoint() {
@@ -734,11 +810,7 @@ export class Canvas {
     if (this.drawOpts.isFirstPoint) {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
-      ctx.beginPath();
-      ctx.strokeStyle = this.options.strokeStyle;
-      ctx.lineWidth = this.options.lineWidth;
-      ctx.lineCap = this.options.lineCap;
-      ctx.lineJoin = this.options.lineJoin;
+      this.setCtxOpts(ctx);
       this.clearCanvas();
       this.ctx.drawImage(this.canvasBuffer, 0, 0);
       console.log(this.buffer);
@@ -780,10 +852,7 @@ export class Canvas {
     if (this.drawOpts.isFirstPoint) {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
-      ctx.strokeStyle = this.options.strokeStyle;
-      ctx.lineWidth = this.options.lineWidth;
-      ctx.lineCap = this.options.lineCap;
-      ctx.lineJoin = this.options.lineJoin;
+      this.setCtxOpts(ctx);
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
@@ -791,8 +860,10 @@ export class Canvas {
       if (this.pathBuffer.length) {
         this.pathBuffer.splice(0, this.pathBuffer.length);
       }
-      this.pathBuffer.push({x: coords.x1, y: coords.y1, type: 'line', isPath: 'true'});
-      this.pathBuffer.push({x: coords.xCur, y: coords.yCur, type: 'line', isPath: 'true'});
+      // При рисовании линии, если в этот момент есть запрос, линия с запроса искажается
+      this.pathBuffer.push({x: coords.x1, y: coords.y1, type: 'line', isPath: 'true', pos: 'first'});
+      this.pathBuffer.push({x: coords.xCur, y: coords.yCur, type: 'line', isPath: 'true', pos: 'last'});
+      this.drawBuffered();
       this.drawBuffered(this.pathBuffer);
     }
     else {
@@ -818,9 +889,7 @@ export class Canvas {
     if (this.drawOpts.isFirstPoint) {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
-      ctx.fillStyle = this.options.fillStyle;
-      ctx.strokeStyle = this.options.strokeStyle;
-      ctx.lineWidth = this.options.lineWidth;
+      this.setCtxOpts(ctx);
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
@@ -854,9 +923,7 @@ export class Canvas {
     if (this.drawOpts.isFirstPoint) {
       coords.xCur = coords.x1 + options.strokeWidth;
       coords.yCur = coords.y1 + options.strokeWidth;
-      ctx.fillStyle = this.options.fillStyle;
-      ctx.strokeStyle = this.options.strokeStyle;
-      ctx.lineWidth = this.options.lineWidth;
+      this.setCtxOpts(ctx);
     }
     else if (!this.drawOpts.isLastPoint) {
       this.clearCanvas();
@@ -874,6 +941,40 @@ export class Canvas {
       this.buffer.push({type: 'ellipse', pos: 'first'});
       this.buffer.push({x: coords.x1, y: coords.y1, dx: Math.abs(coords.xCur - coords.x1), 
                         dy: Math.abs(coords.yCur - coords.y1), type: 'ellipse'});
+      this.drawBuffered();
+      if (!this.isQueue) {
+        this.isQueue = true;
+        console.log('mouse up send');
+        this.ws.send();
+      }
+    }
+  }
+
+  drawTriangle() {
+    const ctx = this.ctx;
+    const coords = this.coords;
+    const options = this.options;
+    const actions = this.actions;
+
+    if (this.drawOpts.isFirstPoint) {
+      coords.xCur = coords.x1 + options.strokeWidth;
+      coords.yCur = coords.y1 + options.strokeWidth;
+      this.setCtxOpts(ctx);
+    }
+    else if (!this.drawOpts.isLastPoint) {
+      this.clearCanvas();
+      ctx.drawImage(this.canvasBuffer, 0, 0);
+      if (this.pathBuffer.length) {
+        this.pathBuffer.splice(0, this.pathBuffer.length);
+      }
+      this.pathBuffer.push({x1: coords.x1, y1: coords.y1, x2: coords.xCur, y2: coords.yCur, type: 'triangle', isPath: true});
+      this.drawBuffered(this.pathBuffer);
+    }
+    else {
+      this.clearCanvas();
+      this.ctx.drawImage(this.canvasBuffer, 0, 0);
+      this.buffer.push({type: 'triangle', pos: 'first'});
+      this.buffer.push({x1: coords.x1, y1: coords.y1, x2: coords.xCur, y2: coords.yCur, type: 'triangle'});
       this.drawBuffered();
       if (!this.isQueue) {
         this.isQueue = true;

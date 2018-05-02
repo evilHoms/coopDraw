@@ -1,10 +1,10 @@
 import config from '../config.json';
 // Отрпавка начальной страницы
 const rootHandler = (req, res) => {
-  const hostname = config.hostname;
-  const staticPath = '/public';
-  // const hostname = process.env.PRODUCTION ? config.hostname : config.localhost;
-  // const staticPath = process.env.PRODUCTION ? '/public' : '/';
+  // const hostname = config.hostname;
+  // const staticPath = '/public';
+  const hostname = process.env.PRODUCTION ? config.hostname : config.localhost;
+  const staticPath = process.env.PRODUCTION ? '/public' : '/';
   res.writeHead(200);
   res.write(
     `
