@@ -1,6 +1,7 @@
 'use strict';
 
 import { Requests } from '../request/request.js';
+import Draggable from '../dragDrop/dragDrop.js';
 import './canvas.scss';
 import config from '../../config.json';
 
@@ -242,6 +243,7 @@ export class Canvas {
 
   buildAsideMenu() {
     const aside = this.editor.querySelector('.editor__menu');
+    const asideDraggable = new Draggable(aside);
     const tools = [
       'pen',        'line',
       'rectangle',  'ellipse',
@@ -271,12 +273,28 @@ export class Canvas {
       addSettingElement(settingsWrapper, el, this);
     });
 
-    const showHideArrow = document.createElement('div');
-    showHideArrow.classList.add('show-hide-arrow');
+    // const showHideArrow = document.createElement('div');
+    // showHideArrow.classList.add('show-hide-arrow');
+
+    aside.addEventListener('mousedown', onAsideMouseDown.bind(this));
+    //aside.addEventListener('mousemove', onAsideMouseMove.bind(this));
+    aside.addEventListener('mouseup', onAsideMouseUp.bind(this));
 
     aside.appendChild(toolsWrapper);
     aside.appendChild(settingsWrapper);
-    aside.appendChild(showHideArrow);
+    //aside.appendChild(showHideArrow);
+
+    function onAsideMouseDown(e) {
+      asideDraggable.catchElement({ xMouse: e.pageX, yMouse: e.pageY });
+    }
+
+    function onAsideMouseMove(e) {
+      asideDraggable.moveElement({ xMouse: e.pageX, yMouse: e.pageY });
+    }
+
+    function onAsideMouseUp(e) {
+      asideDraggable.dropElement({ xMouse: e.pageX, yMouse: e.pageY });
+    }
 
     function addAsideElement(wrapper, tool, self) {
       const element = document.createElement('div');
@@ -342,18 +360,19 @@ export class Canvas {
 
     function lineWidthInputHandler (e, self, pointView) {
       const lastItemPattern = /\d/;
+      const lineWidthInputPattern = /^\d+$/;
       const value = e.currentTarget.value;
       if (value.length < 1) {
         e.currentTarget.value = 0;
       }
-      else if (lastItemPattern.test(value[value.length - 1])) {
+      else if (lineWidthInputPattern.test(value)) {
         self.options.lineWidth = value;
         pointView.style.width = value + 'px';
       }
       else {
-        e.currentTarget.value = value.slice(0, -1);
+        e.currentTarget.value = value.replace(/\D/, '');
       }    
-      if (value.length > 1 && value[0] == 0) {
+      if (value.length > 1 && value[0] == 0 && lineWidthInputPattern.test(value)) {
         e.currentTarget.value = value.slice(1);
       }  
     }
